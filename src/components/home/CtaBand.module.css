@@ -1,0 +1,36 @@
+.band {
+  background: var(--accent-500);
+  color: var(--brand-950);
+  overflow: hidden;
+}
+
+.inner {
+  padding-top: clamp(64px, 8vw, 112px);
+  padding-bottom: clamp(64px, 8vw, 112px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(44px, 7vw, 120px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+  max-width: 960px;
+}
+
+.cta {
+  background: var(--brand-950);
+  color: #fff;
+  min-height: 64px;
+  padding: 0 34px;
+  font-size: 17px;
+}
+.cta:hover {
+  background: var(--brand-900);
+  color: #fff;
+}

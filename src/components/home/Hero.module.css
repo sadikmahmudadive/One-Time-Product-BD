@@ -1,0 +1,250 @@
+.hero {
+  position: relative;
+  min-height: max(720px, calc(100svh - var(--header-height)));
+  display: flex;
+  flex-direction: column;
+  background: var(--brand-950);
+  color: #fff;
+  overflow: hidden;
+}
+
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(231, 241, 235, 0.1) 1.2px, transparent 1.3px);
+  background-size: 24px 24px;
+}
+
+.ring {
+  position: absolute;
+  right: -12vw;
+  top: 46%;
+  width: min(90vw, 1080px);
+  aspect-ratio: 1 / 1;
+  margin-top: calc(min(90vw, 1080px) / -2);
+  border-radius: 999px;
+  border: 1.5px dashed rgba(183, 217, 87, 0.26);
+}
+
+.grid {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+  padding-top: clamp(48px, 6vw, 80px);
+  padding-bottom: 40px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(48px, 6.6vw, 104px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 650;
+  color: #fff;
+}
+.title > span {
+  display: inline-block;
+}
+
+.lede {
+  margin: 28px 0 36px;
+  max-width: 520px;
+  font-size: clamp(17px, 1.4vw, 20px);
+  line-height: 1.6;
+  color: var(--brand-100);
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Product collage */
+.stage {
+  position: relative;
+  aspect-ratio: 1 / 0.92;
+}
+
+.innerRing {
+  position: absolute;
+  left: 16%;
+  top: 14%;
+  width: 68%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  border: 1px solid rgba(231, 241, 235, 0.18);
+}
+
+.satellite {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--accent-500);
+}
+
+.disc {
+  position: absolute;
+  left: 22%;
+  top: 20%;
+  width: 56%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  background: var(--surface-50);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+}
+
+.mainShape {
+  position: absolute;
+  left: 24%;
+  top: 19%;
+  width: 52%;
+}
+
+.floater {
+  position: absolute;
+}
+
+.card {
+  padding: 8px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+.caption {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--brand-100);
+}
+
+.priceChip {
+  position: absolute;
+  left: 4%;
+  bottom: 10%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+.stockDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--success-700);
+}
+
+.chipText {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-950);
+}
+
+.chipPrice {
+  color: var(--ink-700);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chapter strip */
+.chapters {
+  position: relative;
+  width: 100%;
+  padding-bottom: 28px;
+}
+
+.chapterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  align-items: stretch;
+}
+
+.chapter {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  border-top: 1px solid rgba(231, 241, 235, 0.22);
+  color: #fff;
+  text-decoration: none;
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
+}
+.chapter:hover {
+  background: rgba(231, 241, 235, 0.06);
+  border-color: var(--accent-500);
+  color: #fff;
+}
+
+.chapterNum {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--accent-500);
+}
+
+.chapterLabel {
+  font-size: 17px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.arrow {
+  transition: translate 0.3s;
+}
+.chapter:hover .arrow {
+  translate: 5px 0;
+}
+
+.scrollCue {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 24px;
+  color: var(--brand-100);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.scrollCue:hover {
+  color: #fff;
+}
+
+.mouse {
+  width: 26px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(231, 241, 235, 0.55);
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.cueDot {
+  width: 4px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--accent-500);
+  animation: :global(cue) 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

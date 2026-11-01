@@ -1,0 +1,40 @@
+/* Design tokens — from design.md §3 */
+:root {
+  --brand-950: #102d25;
+  --brand-900: #173c31;
+  --brand-700: #28634d;
+  --brand-600: #347a5d;
+  --brand-100: #e7f1eb;
+  --accent-500: #b7d957;
+  --accent-400: #c7e474;
+  --accent-100: #f2f8d9;
+
+  --ink-950: #171d1a;
+  --ink-700: #4d5952;
+  --ink-500: #77827b;
+  --line-200: #e5eae6;
+  --line-300: #d3ddd6;
+
+  --surface-0: #ffffff;
+  --surface-50: #f7f9f7;
+  --surface-100: #eff3f0;
+
+  --success-700: #23734b;
+  --warning-700: #98651b;
+  --danger-700: #b53a36;
+
+  --radius-sm: 8px;
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-panel: 24px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 8px 28px rgba(16, 45, 37, 0.06);
+  --shadow-floating: 0 16px 48px rgba(16, 45, 37, 0.14);
+
+  --header-height: 72px;
+  --gutter: clamp(18px, 4vw, 40px);
+  --container-wide: 1360px;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+}

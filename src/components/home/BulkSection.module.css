@@ -1,0 +1,94 @@
+.section {
+  background: var(--surface-50);
+}
+
+.inner {
+  padding-bottom: clamp(72px, 9vw, 128px);
+}
+
+.panel {
+  border-radius: 32px;
+  background: var(--brand-100);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: clamp(32px, 5vw, 64px);
+  padding: clamp(24px, 5vw, 72px);
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(32px, 3.8vw, 56px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+  color: var(--brand-950);
+}
+
+.lede {
+  margin: 20px 0 28px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-700);
+  max-width: 480px;
+}
+
+.points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.points li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 16px;
+}
+.points svg {
+  flex: none;
+}
+
+.formCard {
+  background: var(--surface-0);
+  border-radius: var(--radius-panel);
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: 0 16px 48px rgba(16, 45, 37, 0.08);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 16px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.done {
+  text-align: center;
+  padding: 32px 8px;
+}
+.done h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 650;
+}
+.done p {
+  margin: 0 0 22px;
+  font-size: 15px;
+  color: var(--ink-700);
+}
+
+.doneIcon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 999px;
+  background: var(--brand-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,77 @@
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--brand-950);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(20px, 4vw, 40px);
+  transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.out {
+  transform: translateY(-100%);
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.skip {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+.tagline {
+  margin: 0;
+  font-size: clamp(32px, 4.4vw, 64px);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  max-width: 900px;
+}
+
+.meterRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.pct {
+  margin: 0;
+  font-size: clamp(88px, 17vw, 240px);
+  line-height: 0.85;
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pct span {
+  font-size: 0.35em;
+  color: var(--accent-500);
+}
+
+.track {
+  margin-top: 24px;
+  height: 2px;
+  background: rgba(231, 241, 235, 0.16);
+}
+
+.bar {
+  height: 100%;
+  background: var(--accent-500);
+  transition: width 0.12s linear;
+}
