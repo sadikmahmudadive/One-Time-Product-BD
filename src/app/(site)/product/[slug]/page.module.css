@@ -1,0 +1,153 @@
+.page {
+  padding-top: 12px;
+  padding-bottom: clamp(64px, 8vw, 112px);
+}
+
+.top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: clamp(32px, 5vw, 80px);
+  align-items: start;
+  margin-top: 16px;
+}
+
+.gallery {
+  position: relative;
+  border-radius: var(--radius-panel);
+  background: var(--surface-100);
+  padding: clamp(24px, 6vw, 72px) clamp(24px, 7vw, 96px) 56px;
+}
+@media (min-width: 900px) {
+  .gallery {
+    position: sticky;
+    top: calc(var(--header-height) + 24px);
+  }
+}
+
+.badge {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--accent-500);
+  color: var(--brand-950);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.shape {
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.caption {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.cat {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand-700);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+  text-wrap: balance;
+}
+
+.meta {
+  margin: 14px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-700);
+}
+
+.summary {
+  margin: 14px 0 32px;
+  max-width: 56ch;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-700);
+}
+
+.specs {
+  margin-top: clamp(56px, 8vw, 104px);
+  max-width: 760px;
+}
+
+.h2 {
+  margin: 0 0 20px;
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 650;
+}
+
+.dl {
+  margin: 0;
+  border-top: 1px solid var(--line-200);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(120px, 220px) 1fr;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-200);
+}
+.row dt {
+  font-weight: 600;
+  color: var(--ink-700);
+}
+.row dd {
+  margin: 0;
+}
+
+.note {
+  margin: 18px 0 0;
+  font-size: 15px;
+  color: var(--ink-700);
+}
+.note a {
+  font-weight: 600;
+}
+
+.relatedHead {
+  margin-top: clamp(64px, 8vw, 112px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.all {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand-900);
+  text-decoration: none;
+  border-bottom: 1.5px solid var(--accent-500);
+}
+
+.related {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 24px;
+}
+.related > li {
+  min-width: 0;
+}

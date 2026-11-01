@@ -53,3 +53,15 @@
   font-size: 14px;
   color: var(--ink-700);
 }
+
+.footer {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.footer .note {
+  margin: 0;
+}

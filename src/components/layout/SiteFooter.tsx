@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { CONTACT, PLACEHOLDER } from "@/lib/contact";
 import { FOOTER_LINKS } from "@/lib/content";
 import { NewsletterForm } from "./NewsletterForm";
 import styles from "./SiteFooter.module.css";
@@ -22,7 +24,7 @@ export function SiteFooter() {
             <NewsletterForm />
             <p className={styles.follow}>
               Or follow{" "}
-              <a className={styles.link} href="https://www.instagram.com/_otpb_/" style={{ fontWeight: 600, textDecoration: "underline" }}>
+              <a className={styles.link} href={CONTACT.instagram} style={{ fontWeight: 600, textDecoration: "underline" }}>
                 @_otpb_
               </a>{" "}
               on Instagram.
@@ -36,9 +38,9 @@ export function SiteFooter() {
               <p className={styles.heading}>{heading}</p>
               <div className={styles.list}>
                 {links.map((l) => (
-                  <a key={l.label} className={styles.link} href={l.href}>
+                  <Link key={l.label} className={styles.link} href={l.href}>
                     {l.label}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </nav>
@@ -46,9 +48,9 @@ export function SiteFooter() {
           <div>
             <p className={styles.heading}>Contact</p>
             <div className={`${styles.list} ${styles.contact}`}>
-              <span>[PHONE NUMBER]</span>
-              <span>[EMAIL ADDRESS]</span>
-              <span>[SHOWROOM / FACTORY ADDRESS]</span>
+              <span>{CONTACT.phone ?? PLACEHOLDER.phone}</span>
+              <span>{CONTACT.email ?? PLACEHOLDER.email}</span>
+              <span>{CONTACT.address ?? PLACEHOLDER.address}</span>
             </div>
           </div>
         </div>

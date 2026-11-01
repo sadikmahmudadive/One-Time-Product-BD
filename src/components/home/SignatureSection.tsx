@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { SIGNATURE_CALLOUTS, SIGNATURE_SPECS } from "@/lib/content";
 import styles from "./SignatureSection.module.css";
@@ -86,12 +87,12 @@ export function SignatureSection() {
         </div>
 
         <div className={`reveal ${styles.actions}`}>
-          <AddToCartButton label="1000 ml Black Premium Box" className="btn btn-lime">
+          <AddToCartButton slug="1000-ml-black-premium-box" className="btn btn-lime">
             Add to cart · ৳18.00
           </AddToCartButton>
-          <a className="btn btn-ghost" href="#shop">
+          <Link className="btn btn-ghost" href="/shop/square">
             See all boxes
-          </a>
+          </Link>
         </div>
       </div>
     </section>

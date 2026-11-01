@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ProductShape } from "@/components/ui/ProductShape";
 import type { ShapeKind } from "@/lib/content";
 import styles from "./ProductCard.module.css";
@@ -5,24 +6,28 @@ import styles from "./ProductCard.module.css";
 interface ProductCardProps {
   name: string;
   kind: ShapeKind;
-  /** Corner badge over the image — "New" or an "In stock" state. */
-  badge: "new" | "in-stock";
+  /** Product page the image and title lead to. */
+  href: string;
+  /** Corner badge over the image. */
+  badge?: "new" | "in-stock";
+  /** Capacity or pack summary shown under the title. */
+  meta?: string;
+  /** Price text, already formatted — e.g. "From ৳1,500" or "Price on request". */
   price: string;
   /** Price basis shown next to the price, e.g. "by pack size". */
   unit?: string;
   /** Optional variant picker slot, rendered between the price and the action. */
   variants?: React.ReactNode;
-  /** The add-to-cart control. */
+  /** The add-to-cart (or "Choose options") control. */
   action: React.ReactNode;
 }
 
-export function ProductCard({ name, kind, badge, price, unit, variants, action }: ProductCardProps) {
+export function ProductCard({ name, kind, href, badge, meta, price, unit, variants, action }: ProductCardProps) {
   return (
     <article className={styles.card}>
-      <div className={styles.media}>
-        {badge === "new" ? (
-          <span className={`${styles.badge} ${styles.badgeNew}`}>New</span>
-        ) : (
+      <Link href={href} className={styles.media} aria-label={name} tabIndex={-1}>
+        {badge === "new" && <span className={`${styles.badge} ${styles.badgeNew}`}>New</span>}
+        {badge === "in-stock" && (
           <span className={`${styles.badge} ${styles.badgeStock}`}>
             <span className={styles.stockDot} />
             In stock
@@ -31,9 +36,14 @@ export function ProductCard({ name, kind, badge, price, unit, variants, action }
         <div className={styles.img}>
           <ProductShape kind={kind} />
         </div>
-      </div>
+      </Link>
       <div className={styles.body}>
-        <h3 className={styles.name}>{name}</h3>
+        <h3 className={styles.name}>
+          <Link href={href} className={styles.nameLink}>
+            {name}
+          </Link>
+        </h3>
+        {meta && <p className={styles.meta}>{meta}</p>}
         <p className={styles.priceRow}>
           <span className={styles.price}>{price}</span>
           {unit && <span className={styles.unit}>{unit}</span>}

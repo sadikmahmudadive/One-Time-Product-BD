@@ -1,0 +1,64 @@
+.card {
+  background: var(--surface-0);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-panel);
+  padding: clamp(20px, 3.5vw, 40px);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 18px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.req {
+  color: var(--danger-700);
+}
+
+.error {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fbeceb;
+  color: var(--danger-700);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.done {
+  text-align: center;
+  padding: clamp(24px, 5vw, 56px) 8px;
+}
+.done h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+.done p {
+  margin: 0 auto 24px;
+  max-width: 44ch;
+  color: var(--ink-700);
+}
+
+.doneIcon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 999px;
+  background: var(--brand-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--success-700);
+}

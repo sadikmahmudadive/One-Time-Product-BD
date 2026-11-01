@@ -24,12 +24,13 @@ export const CHAPTERS: Chapter[] = [
 ];
 
 export const NAV_LINKS = [
-  { href: "#range", label: "The range" },
-  { href: "#madefor", label: "Made for" },
-  { href: "#sizes", label: "Sizes" },
-  { href: "#shop", label: "Shop" },
-  { href: "#bulk", label: "Bulk orders" },
-  { href: "#footer", label: "Contact" },
+  { href: "/shop", label: "Shop" },
+  { href: "/shop/square", label: "Square boxes" },
+  { href: "/shop/round", label: "Round boxes" },
+  { href: "/shop/dessert-cups", label: "Dessert cups" },
+  { href: "/shop/crates", label: "Crates" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export interface RangeRow {
@@ -65,7 +66,7 @@ export const RANGE_ROWS: RangeRow[] = [
     titleIt: "everyday classics.",
     desc: "Round containers for sweets, biscuits and snacks, including the 1000 ml Classic Biscuit Container at ৳20.00.",
     cta: "Shop round boxes",
-    href: "#shop",
+    href: "/shop/round",
   },
   {
     n: "03",
@@ -76,7 +77,7 @@ export const RANGE_ROWS: RangeRow[] = [
     titleIt: "made to be noticed.",
     desc: "Heart-shaped and semi-square acrylic dessert cups, in packs of 100, 300, 500 or 1000.",
     cta: "Shop dessert cups",
-    href: "#shop",
+    href: "/shop/dessert-cups",
   },
   {
     n: "04",
@@ -87,7 +88,7 @@ export const RANGE_ROWS: RangeRow[] = [
     titleIt: "built for bulk.",
     desc: "The FoodSafe Durable Plastic Crate for moving and storing stock, in packs from 5 to 500.",
     cta: "Shop crates",
-    href: "#shop",
+    href: "/shop/crates",
   },
 ];
 
@@ -98,6 +99,7 @@ export interface Persona {
   title: string;
   desc: string;
   picks: string;
+  href: string;
 }
 
 export const PERSONAS: Persona[] = [
@@ -108,6 +110,7 @@ export const PERSONAS: Persona[] = [
     title: "Sweet shops",
     desc: "Let mishti and sweets shine through a clear lid.",
     picks: "1000 ml Transparent Premium Box, 1000 ml Square Box",
+    href: "/shop/square",
   },
   {
     n: "02",
@@ -116,6 +119,7 @@ export const PERSONAS: Persona[] = [
     title: "Bakeries",
     desc: "Biscuits, cakes and bakes, boxed neatly for the counter.",
     picks: "1000 ml Classic Biscuit Container, Black Premium Box",
+    href: "/shop/round",
   },
   {
     n: "03",
@@ -124,6 +128,7 @@ export const PERSONAS: Persona[] = [
     title: "Caterers and events",
     desc: "Single-serve desserts by the hundred.",
     picks: "Heart Shape Dessert Cup, Semi Square Dessert Cup",
+    href: "/shop/dessert-cups",
   },
   {
     n: "04",
@@ -132,11 +137,13 @@ export const PERSONAS: Persona[] = [
     title: "Households",
     desc: "Store, gift and share food at home.",
     picks: "250 ml Square Box, round boxes",
+    href: "/shop/square",
   },
 ];
 
 export interface SquareSize {
   v: string;
+  slug: string;
   scale: number;
   fill: number;
   price: string;
@@ -144,10 +151,10 @@ export interface SquareSize {
 }
 
 export const SQUARE_SIZES: SquareSize[] = [
-  { v: "250", scale: 0.56, fill: 25, price: "৳10.00", priced: true },
-  { v: "500", scale: 0.7, fill: 50, price: "Price on product page", priced: false },
-  { v: "900", scale: 0.88, fill: 90, price: "Price on product page", priced: false },
-  { v: "1000", scale: 1, fill: 100, price: "৳25.00", priced: true },
+  { v: "250", slug: "250-ml-square-box", scale: 0.56, fill: 25, price: "৳10.00", priced: true },
+  { v: "500", slug: "500-ml-square-box", scale: 0.7, fill: 50, price: "Price on product page", priced: false },
+  { v: "900", slug: "900-ml-square-box", scale: 0.88, fill: 90, price: "Price on product page", priced: false },
+  { v: "1000", slug: "1000-ml-square-box", scale: 1, fill: 100, price: "৳25.00", priced: true },
 ];
 
 export interface Spec {
@@ -192,73 +199,18 @@ export const BULK_POINTS = [
 export const BUSINESS_TYPES = ["Sweet shop", "Bakery", "Catering", "Restaurant", "Event", "Household"];
 export const QUOTE_PRODUCTS = ["Square boxes", "Round boxes", "Dessert cups", "Plastic crates", "Mixed order"];
 
-export interface Arrival {
-  id: string;
-  name: string;
-  kind: ShapeKind;
-  price: string;
-  unit: string;
-  packs: string[] | null;
-}
-
-export const ARRIVALS: Arrival[] = [
-  {
-    id: "heart",
-    name: "Heart Shape Dessert Cup (Acrylic)",
-    kind: "heart",
-    price: "৳1,500 – ৳10,000",
-    unit: "by pack size",
-    packs: ["100", "300", "500", "1000"],
-  },
-  {
-    id: "semi",
-    name: "Semi Square Dessert Cup (Acrylic)",
-    kind: "cup",
-    price: "৳1,500 – ৳10,000",
-    unit: "by pack size",
-    packs: ["100", "300", "500", "1000"],
-  },
-  {
-    id: "crate",
-    name: "FoodSafe Durable Plastic Crate",
-    kind: "crate",
-    price: "৳2,250 – ৳190,000",
-    unit: "by pack size",
-    packs: ["5", "50", "100", "500"],
-  },
-  { id: "sq250", name: "250 ml Square Box", kind: "square", price: "৳10.00", unit: "", packs: null },
-];
-
-export interface PopularProduct {
-  name: string;
-  price: string;
-  kind: ShapeKind;
-}
-
-export const POPULAR: PopularProduct[] = [
-  { name: "1000 ml Classic Biscuit Container", price: "৳20.00", kind: "round" },
-  { name: "1000 ml Transparent Premium Box", price: "৳17.00", kind: "rectClear" },
-  { name: "1000 ml Black Premium Box", price: "৳18.00", kind: "rectBlack" },
-  { name: "1000 ml Square Box", price: "৳25.00", kind: "square" },
-];
-
 export const FOOTER_LINKS = {
-  "Quick links": [
-    { href: "#top", label: "Home" },
-    { href: "#range", label: "Round boxes" },
-    { href: "#sizes", label: "Square boxes" },
-    { href: "#footer", label: "About" },
-    { href: "#footer", label: "Contact" },
+  Shop: [
+    { href: "/shop", label: "All products" },
+    { href: "/shop/square", label: "Square & rectangular" },
+    { href: "/shop/round", label: "Round containers" },
+    { href: "/shop/dessert-cups", label: "Dessert cups" },
+    { href: "/shop/crates", label: "Crates" },
   ],
-  Explore: [
-    { href: "#shop", label: "Bestsellers" },
-    { href: "#shop", label: "New arrivals" },
-    { href: "#signature", label: "Featured" },
-    { href: "#footer", label: "Gift card" },
-  ],
-  Help: [
-    { href: "#footer", label: "Track order" },
-    { href: "#footer", label: "Delivery and returns" },
-    { href: "#footer", label: "FAQs" },
+  Company: [
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
+    { href: "/quote", label: "Bulk quote" },
+    { href: "/faq", label: "FAQs" },
   ],
 } as const;

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Lenis from "lenis";
 import { gsap } from "gsap";
@@ -26,6 +27,8 @@ function scrubbed(trigger: Element, start: string, end: string): ScrollTrigger.V
  * globals.css, which lands the static end-states).
  */
 export function ScrollMotion() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const mm = gsap.matchMedia();
 
@@ -168,7 +171,7 @@ export function ScrollMotion() {
     });
 
     return () => mm.revert();
-  }, []);
+  }, [pathname]); // each page has its own set of animated elements
 
   return null;
 }

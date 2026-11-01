@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowRightIcon } from "@/components/ui/Icons";
 import styles from "./CtaBand.module.css";
 
@@ -8,10 +9,10 @@ export function CtaBand() {
         <h2 className={`reveal ${styles.title}`}>
           Ready to pack <span className="it">beautifully?</span>
         </h2>
-        <a className={`btn reveal d2 ${styles.cta}`} href="#shop">
+        <Link className={`btn reveal d2 ${styles.cta}`} href="/shop">
           Get started
           <ArrowRightIcon size={20} />
-        </a>
+        </Link>
       </div>
     </section>
   );

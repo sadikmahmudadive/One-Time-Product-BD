@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ProductShape } from "@/components/ui/ProductShape";
@@ -47,11 +48,11 @@ export function SizesSection() {
               <p className={styles.price}>{current.price}</p>
             </div>
             {current.priced ? (
-              <AddToCartButton label={name} />
+              <AddToCartButton slug={current.slug} />
             ) : (
-              <a className="btn btn-secondary" href="#shop">
+              <Link className="btn btn-secondary" href={`/product/${current.slug}`}>
                 View product
-              </a>
+              </Link>
             )}
           </div>
         </div>

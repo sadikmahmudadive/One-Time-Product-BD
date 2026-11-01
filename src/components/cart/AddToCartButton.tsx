@@ -3,16 +3,25 @@
 import { useCart } from "./CartProvider";
 
 interface AddToCartButtonProps {
-  /** Name shown in the confirmation toast. */
-  label: string;
+  slug: string;
+  variantId?: string;
+  qty?: number;
   className?: string;
+  disabled?: boolean;
   children?: React.ReactNode;
 }
 
-export function AddToCartButton({ label, className = "btn btn-primary", children = "Add to cart" }: AddToCartButtonProps) {
+export function AddToCartButton({
+  slug,
+  variantId,
+  qty = 1,
+  className = "btn btn-primary",
+  disabled,
+  children = "Add to cart",
+}: AddToCartButtonProps) {
   const { addItem } = useCart();
   return (
-    <button type="button" className={className} onClick={() => addItem(label)}>
+    <button type="button" className={className} disabled={disabled} onClick={() => addItem(slug, variantId, qty)}>
       {children}
     </button>
   );

@@ -1,41 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { MenuIcon, SearchIcon } from "@/components/ui/Icons";
 import { NAV_LINKS } from "@/lib/content";
 import styles from "./SiteHeader.module.css";
 
+/** A category link is current on its own page; "Shop" only on the all-products page and product pages. */
+function isCurrent(pathname: string, href: string) {
+  if (href === "/shop") return pathname === "/shop" || pathname.startsWith("/product/");
+  return pathname === href;
+}
+
 export function SiteHeader() {
   const { count } = useCart();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the drawer whenever the route changes.
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   return (
     <header className={styles.header}>
       <div className={`wrap ${styles.bar}`}>
-        <a href="#top" className={styles.logo}>
+        <Link href="/" className={styles.logo}>
           One Time Product BD
           <span className={`pulse ${styles.logoDot}`} />
-        </a>
+        </Link>
         <nav aria-label="Main" className={styles.links}>
           {NAV_LINKS.map((l) => (
-            <a key={l.href + l.label} className={styles.link} href={l.href}>
+            <Link
+              key={l.href}
+              className={styles.link}
+              href={l.href}
+              aria-current={isCurrent(pathname, l.href) ? "page" : undefined}
+            >
               {l.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className={styles.actions}>
-          <button className={`${styles.iconBtn} hide-sm`} type="button" aria-label="Search products">
+          <Link href="/quote" className={`btn btn-ghost ${styles.quote}`}>
+            Bulk quote
+          </Link>
+          <Link className={`${styles.iconBtn} hide-sm`} href="/shop#search" aria-label="Search products">
             <SearchIcon />
-          </button>
-          <button className={styles.cartBtn} type="button" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`}>
+          </Link>
+          <Link className={styles.cartBtn} href="/cart" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`}>
             <span>Cart</span>
             <span className={styles.cartCount}>{count}</span>
-          </button>
+          </Link>
           <button
             className={`${styles.iconBtn} ${styles.menuBtn}`}
             type="button"
-            aria-label="Open menu"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
           >
@@ -47,10 +67,11 @@ export function SiteHeader() {
       {menuOpen && (
         <nav aria-label="Mobile" className={`wrap ${styles.mobileNav}`}>
           {NAV_LINKS.map((l) => (
-            <a key={l.href + l.label} href={l.href} onClick={() => setMenuOpen(false)}>
+            <Link key={l.href} href={l.href} aria-current={isCurrent(pathname, l.href) ? "page" : undefined}>
               {l.label}
-            </a>
+            </Link>
           ))}
+          <Link href="/quote">Request a bulk quote</Link>
         </nav>
       )}
     </header>

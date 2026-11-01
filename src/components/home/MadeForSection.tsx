@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { PERSONAS } from "@/lib/content";
 import styles from "./MadeForSection.module.css";
@@ -29,7 +30,7 @@ export function MadeForSection() {
         <div className={styles.grid}>
           {PERSONAS.map((p, i) => (
             <div key={p.n} className={`reveal ${DELAYS[i % 4]}`} style={{ height: "100%" }}>
-              <a className={styles.persona} href="#shop">
+              <Link className={styles.persona} href={p.href}>
                 <div className={styles.media} style={{ background: p.bg }}>
                   <span className={styles.num}>{p.n}</span>
                   <div className={styles.img}>
@@ -50,7 +51,7 @@ export function MadeForSection() {
                     </span>
                   </span>
                 </div>
-              </a>
+              </Link>
             </div>
           ))}
         </div>

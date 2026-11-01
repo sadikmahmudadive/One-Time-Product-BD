@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { RANGE_ROWS } from "@/lib/content";
 import styles from "./RangeSection.module.css";
@@ -48,12 +49,12 @@ export function RangeSection() {
                   </span>
                 </h3>
                 <p className={styles.desc}>{r.desc}</p>
-                <a className={styles.rowLink} href={r.href}>
+                <Link className={styles.rowLink} href={r.href}>
                   {r.cta}{" "}
                   <span className={styles.arrow} aria-hidden="true">
                     →
                   </span>
-                </a>
+                </Link>
               </div>
             </div>
           ))}
