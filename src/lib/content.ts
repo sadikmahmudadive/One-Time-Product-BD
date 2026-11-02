@@ -179,15 +179,26 @@ export const SIGNATURE_CALLOUTS = [
   { label: "Glossy black base", side: "right", style: { right: "-13%", bottom: "14%" } },
 ] as const;
 
-export const MARQUEE_ITEMS = [
-  "Square boxes",
-  "Round containers",
-  "Dessert cups",
-  "Biscuit containers",
-  "Plastic crates",
-  "Retail packs",
-  "Bulk orders",
-  "Delivery across Bangladesh",
+export interface MarqueeSlide {
+  label: string;
+  /** Short factual line under the label. */
+  sub?: string;
+  /** Product illustration for product slides… */
+  kind?: ShapeKind;
+  /** …or a drawn icon for service slides. */
+  icon?: "pack" | "bulk" | "truck";
+  /** Omit for slides that are statements rather than destinations. */
+  href?: string;
+}
+
+export const MARQUEE_SLIDES: MarqueeSlide[] = [
+  { label: "Square boxes", sub: "250 – 1000 ml", kind: "square", href: "/shop/square" },
+  { label: "Round containers", sub: "Incl. biscuit containers", kind: "round", href: "/shop/round" },
+  { label: "Dessert cups", sub: "Packs of 100 – 1000", kind: "heart", href: "/shop/dessert-cups" },
+  { label: "Plastic crates", sub: "Packs of 5 – 500", kind: "crate", href: "/shop/crates" },
+  { label: "Retail packs", sub: "From 5 to 1000 pieces", icon: "pack", href: "/shop" },
+  { label: "Bulk orders", sub: "Request a quote", icon: "bulk", href: "/quote" },
+  { label: "Delivery across Bangladesh", icon: "truck" },
 ];
 
 export const BULK_POINTS = [
