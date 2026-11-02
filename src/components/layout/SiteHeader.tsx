@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { MenuIcon, SearchIcon } from "@/components/ui/Icons";
+import { Logo } from "@/components/ui/Logo";
 import { NAV_LINKS } from "@/lib/content";
 import styles from "./SiteHeader.module.css";
 
@@ -25,9 +26,8 @@ export function SiteHeader() {
   return (
     <header className={styles.header}>
       <div className={`wrap ${styles.bar}`}>
-        <Link href="/" className={styles.logo}>
-          One Time Product BD
-          <span className={`pulse ${styles.logoDot}`} />
+        <Link href="/" className={styles.logo} aria-label="One Time Product BD — home">
+          <Logo tone="dark" knockout="var(--brand-950)" size={25} />
         </Link>
         <nav aria-label="Main" className={styles.links}>
           {NAV_LINKS.map((l) => (

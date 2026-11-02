@@ -1,0 +1,75 @@
+/* Palette from the logo system: Field Green, Disc Red, Paper, Ink. */
+.logo {
+  --logo-green: #0f5b3e;
+  --logo-red: #e2412b;
+  --logo-paper: #fbf9f4;
+  --logo-ink: #12201a;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.light {
+  --logo-lid: var(--logo-red);
+  --logo-cup: var(--logo-green);
+  --logo-one: var(--logo-paper);
+  --logo-name: var(--logo-ink);
+  --logo-tag: #3c4a43;
+}
+
+.dark {
+  --logo-lid: var(--logo-red);
+  --logo-cup: var(--logo-paper);
+  --logo-one: var(--logo-knockout);
+  --logo-name: var(--logo-paper);
+  --logo-tag: #dcebe3;
+}
+
+.mark {
+  display: block;
+  flex: none;
+  height: 1.7em;
+  width: auto;
+}
+
+.words {
+  display: flex;
+  flex-direction: column;
+  gap: 0.14em;
+}
+
+.name {
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1em;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  color: var(--logo-name);
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.44em;
+}
+
+.product {
+  font-family: var(--font-hanken), var(--font-inter), system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--logo-tag);
+}
+
+.bd {
+  font-family: var(--font-hanken), var(--font-inter), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.18em 0.5em;
+  border-radius: 0.35em;
+  background: var(--logo-red);
+  color: var(--logo-paper);
+}

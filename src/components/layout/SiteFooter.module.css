@@ -58,6 +58,29 @@
   padding: 48px 0;
 }
 
+.brand {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 40px;
+  padding-bottom: 12px;
+}
+.brand p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--brand-100);
+}
+.brandLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
 .heading {
   margin: 0 0 14px;
   font-size: 12px;
@@ -89,17 +112,19 @@
 
 .wordmark {
   margin: 0 0 32px;
-  font-size: clamp(56px, 11.5vw, 190px);
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-size: clamp(40px, 11.6vw, 172px);
   line-height: 0.9;
-  font-weight: 800;
-  letter-spacing: -0.06em;
+  font-weight: 700;
+  letter-spacing: -0.05em;
   color: var(--brand-900);
   white-space: nowrap;
   overflow: hidden;
 }
 .wordmark span {
-  font-style: italic;
-  font-weight: 500;
+  font-weight: 700;
+  color: var(--brand-700);
+  opacity: 0.55;
 }
 
 .legal {

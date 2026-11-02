@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui/Logo";
 import { CONTACT, PLACEHOLDER } from "@/lib/contact";
 import { FOOTER_LINKS } from "@/lib/content";
 import { NewsletterForm } from "./NewsletterForm";
@@ -33,6 +34,12 @@ export function SiteFooter() {
         </div>
 
         <div className={styles.columns}>
+          <div className={styles.brand}>
+            <Link href="/" aria-label="One Time Product BD — home" className={styles.brandLink}>
+              <Logo tone="dark" knockout="var(--brand-950)" size={32} />
+            </Link>
+            <p>A Bangladesh-based manufacturer and supplier of food-grade plastic packaging.</p>
+          </div>
           {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
             <nav key={heading} aria-label={heading}>
               <p className={styles.heading}>{heading}</p>
@@ -56,7 +63,7 @@ export function SiteFooter() {
         </div>
 
         <p aria-hidden="true" className={`reveal-zoom ${styles.wordmark}`}>
-          One Time <span>Product</span>
+          onetime <span>product</span>
         </p>
 
         <div className={styles.legal}>

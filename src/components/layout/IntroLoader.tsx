@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRightIcon } from "@/components/ui/Icons";
+import { Logo } from "@/components/ui/Logo";
 import styles from "./IntroLoader.module.css";
 
 type Phase = "on" | "leaving" | "gone";
@@ -70,7 +71,7 @@ export function IntroLoader() {
       aria-label="Loading"
     >
       <div className={styles.top}>
-        <span className={styles.brand}>One Time Product BD</span>
+        <Logo tone="dark" knockout="var(--brand-950)" size={26} />
         <button type="button" className={`btn btn-ghost ${styles.skip}`} onClick={enter}>
           Skip the introduction
         </button>

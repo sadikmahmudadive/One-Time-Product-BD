@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Bengali } from "next/font/google";
+import { Bricolage_Grotesque, Hanken_Grotesk, Inter, Noto_Sans_Bengali } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
 import "./globals.css";
 
@@ -18,6 +18,21 @@ const notoBengali = Noto_Sans_Bengali({
   display: "swap",
 });
 
+// Logo typefaces — used only by the logo lockup (see components/ui/Logo).
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const hanken = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-hanken",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "One Time Product BD — Food packaging, presented beautifully",
   description:
@@ -26,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-intro="on" className={`${inter.variable} ${notoBengali.variable}`}>
+    <html lang="en" data-intro="on" className={`${inter.variable} ${notoBengali.variable} ${bricolage.variable} ${hanken.variable}`}>
       <body>
         <noscript>
           <style>{`.loader{display:none}.w,.fade-in,.chip-pop{opacity:1}`}</style>

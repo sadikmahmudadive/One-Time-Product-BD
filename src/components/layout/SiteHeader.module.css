@@ -17,25 +17,15 @@
 }
 
 .logo {
-  text-decoration: none;
-  color: #fff;
-  font-weight: 700;
-  font-size: 19px;
-  letter-spacing: -0.01em;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  min-height: 44px;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: transform 160ms var(--ease-out);
 }
-.logo:hover {
-  color: #fff;
-}
-
-.logoDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--accent-500);
-  display: inline-block;
+.logo:active {
+  transform: scale(0.97);
 }
 
 .links {
@@ -94,6 +84,7 @@
 }
 .iconBtn:hover {
   background: rgba(231, 241, 235, 0.1);
+  color: #fff;
 }
 
 .cartBtn {
@@ -107,11 +98,13 @@
   color: var(--brand-950);
   border: 0;
   font: 600 14px var(--font-inter), system-ui, sans-serif;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 .cartBtn:hover {
   background: var(--accent-400);
+  color: var(--brand-950);
 }
 
 .cartCount {

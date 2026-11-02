@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CHAPTERS } from "@/lib/content";
 import styles from "./ChapterIndex.module.css";
 
-/** Fixed side index (≥1200px) that tracks which chapter is in view. */
+/** Fixed side index (≥1200px): one bubble per chapter, the current one swells and ripples. */
 export function ChapterIndex() {
   const [active, setActive] = useState(CHAPTERS[0].id);
 
@@ -32,8 +32,10 @@ export function ChapterIndex() {
           aria-label={`${c.n} ${c.label}`}
           aria-current={active === c.id ? "location" : undefined}
         >
-          <span>{c.n}</span>
-          <span className={styles.bar} />
+          <span className={styles.dot} />
+          <span className={styles.tip} aria-hidden="true">
+            {c.label}
+          </span>
         </a>
       ))}
     </nav>
