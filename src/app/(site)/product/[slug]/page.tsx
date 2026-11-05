@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { ProductPurchase } from "@/components/commerce/ProductPurchase";
-import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { CheckIcon } from "@/components/ui/Icons";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { PRODUCTS, getCategory, getProduct, hasVariants, isDirectBuy, packSummary, priceLabel } from "@/lib/catalog";
+import type { Product } from "@/lib/catalog";
 import styles from "./page.module.css";
 
 type Params = { slug: string };
@@ -23,10 +25,32 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   return { title: `${product.name} — One Time Product BD`, description: product.summary };
 }
 
+/** schema.org Product data. Only confirmed prices are included; availability is omitted (no stock data). */
+function structuredData(p: Product, category: string) {
+  const prices = [p.price, ...(p.variants?.map((v) => v.price) ?? [])].filter((n): n is number => n !== null);
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: p.name,
+    description: p.summary,
+    category,
+    brand: { "@type": "Brand", name: "One Time Product BD" },
+  };
+  if (prices.length === 1) {
+    data.offers = { "@type": "Offer", priceCurrency: "BDT", price: prices[0] };
+  } else if (prices.length > 1) {
+    data.offers = { "@type": "AggregateOffer", priceCurrency: "BDT", lowPrice: Math.min(...prices), highPrice: Math.max(...prices), offerCount: prices.length };
+  }
+  return JSON.stringify(data);
+}
+
+const REASSURANCE = ["Retail packs and bulk quantities", "Pack sizes and prices shown up front", "Need a different size? Ask for a quote"];
+
 export default async function ProductPage({ params }: { params: Promise<Params> }) {
   const product = getProduct((await params).slug);
   if (!product) notFound();
   const category = getCategory(product.category)!;
+  const material = product.specs.find(([label]) => label.toLowerCase() === "material")?.[1];
 
   // Same category first, topped up from the rest so the row is never thin.
   const related = [
@@ -36,6 +60,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   return (
     <div className={`wrap ${styles.page}`}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData(product, category.name) }} />
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
@@ -47,40 +72,91 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
       <div className={styles.top}>
         <div className={styles.gallery}>
-          {product.tags.includes("new") && <span className={styles.badge}>New</span>}
-          <div className={styles.shape}>
-            <ProductShape kind={product.kind} />
+          <div className={styles.stage}>
+            <div className={styles.tags}>
+              {product.tags.includes("new") && <span className={styles.tagNew}>New</span>}
+              <Link href={`/shop/${category.id}`} className={styles.tagCat}>
+                {category.short}
+              </Link>
+            </div>
+            <div className={styles.shape}>
+              <ProductShape kind={product.kind} />
+            </div>
+            <p className={styles.caption}>Illustration — product photography to follow.</p>
           </div>
-          <p className={styles.caption}>Illustration — product photography to follow.</p>
         </div>
 
         <div className={styles.info}>
-          <p className={styles.cat}>{category.name}</p>
           <h1 className={styles.title}>{product.name}</h1>
-          {packSummary(product) && <p className={styles.meta}>{packSummary(product)}</p>}
+          <ul className={styles.facts} aria-label="Key details">
+            {packSummary(product) && <li>{packSummary(product)}</li>}
+            {product.specs
+              .filter(([label]) => ["Shape", "Colour", "Base", "Material"].includes(label))
+              .slice(0, 2)
+              .map(([label, value]) => (
+                <li key={label}>{value}</li>
+              ))}
+          </ul>
           <p className={styles.summary}>{product.summary}</p>
+
           <ProductPurchase slug={product.slug} />
+
+          <ul className={styles.reassure}>
+            {REASSURANCE.map((t) => (
+              <li key={t}>
+                <CheckIcon size={18} />
+                {t}
+              </li>
+            ))}
+          </ul>
+
+          <div className={styles.details}>
+            <details className={styles.item} open>
+              <summary className={styles.summaryRow}>
+                <span>Specifications</span>
+                <span className={styles.plus} aria-hidden="true" />
+              </summary>
+              <dl className={styles.dl}>
+                {product.specs.map(([label, value]) => (
+                  <div key={label} className={styles.row}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+
+            <details className={styles.item}>
+              <summary className={styles.summaryRow}>
+                <span>Materials and sustainability</span>
+                <span className={styles.plus} aria-hidden="true" />
+              </summary>
+              <div className={styles.body}>
+                {material ? <p>Listed material: {material}.</p> : <p>We haven’t published a material for this product.</p>}
+                <p>
+                  Recycling guidance, reuse and food-contact documentation aren’t listed on this page. <Link href="/contact">Ask us</Link> and we’ll confirm
+                  what applies to this product.
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.item}>
+              <summary className={styles.summaryRow}>
+                <span>Ordering and delivery</span>
+                <span className={styles.plus} aria-hidden="true" />
+              </summary>
+              <div className={styles.body}>
+                <p>Add items to your cart, then send the cart as an order enquiry. Delivery charges and timing are confirmed with your order.</p>
+                <p>
+                  Buying a large quantity? <Link href={`/quote?product=${product.slug}`}>Request a bulk quote</Link>.
+                </p>
+              </div>
+            </details>
+          </div>
         </div>
       </div>
 
-      <section className={styles.specs} aria-labelledby="specs-h">
-        <h2 id="specs-h" className={styles.h2}>
-          Specifications
-        </h2>
-        <dl className={styles.dl}>
-          {product.specs.map(([label, value]) => (
-            <div key={label} className={styles.row}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className={styles.note}>
-          Need dimensions, material or usage details? <Link href="/contact">Ask us</Link> and we’ll confirm them for you.
-        </p>
-      </section>
-
-      <section aria-labelledby="related-h">
+      <section aria-labelledby="related-h" className={styles.relatedWrap}>
         <div className={styles.relatedHead}>
           <h2 id="related-h" className={styles.h2}>
             You might also need

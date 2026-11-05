@@ -11,7 +11,7 @@
 
 .price {
   margin: 0;
-  font-size: clamp(32px, 3.4vw, 44px);
+  font-size: clamp(34px, 3.6vw, 48px);
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-weight: 700;
@@ -35,8 +35,12 @@
 .legend {
   padding: 0;
   margin-bottom: 12px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
+}
+.legend span {
+  font-weight: 500;
+  color: var(--ink-700);
 }
 
 .packGrid {
@@ -132,4 +136,62 @@
 }
 .quoteLink:hover {
   color: var(--brand-700);
+}
+
+/* ---------- Mobile buy bar ---------- */
+.bar {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-height: 76px;
+    padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid var(--line-200);
+    box-shadow: 0 -8px 28px rgba(16, 45, 37, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transform: translateY(100%);
+    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .barOn {
+    transform: translateY(0);
+  }
+}
+
+.barInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.barName {
+  font-size: 13px;
+  color: var(--ink-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barPrice {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--brand-950);
+  font-variant-numeric: tabular-nums;
+}
+.barAction {
+  flex: none;
+}
+.barBtn {
+  min-height: 48px;
+  padding: 0 22px;
 }
