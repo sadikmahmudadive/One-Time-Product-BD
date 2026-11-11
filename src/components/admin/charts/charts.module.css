@@ -1,0 +1,184 @@
+/* ==============================================================================
+   One Time Product BD — Modern Round Charts
+   ============================================================================== */
+
+.donutWrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.chartContainer {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.trackCircle {
+  fill: none;
+  stroke: #e7ece8;
+  stroke-width: 14;
+}
+
+.segmentCircle {
+  fill: none;
+  stroke-width: 14;
+  stroke-linecap: round;
+  transition: stroke-width 0.25s ease, opacity 0.25s ease;
+  cursor: pointer;
+}
+
+.segmentCircle:hover {
+  stroke-width: 18;
+  opacity: 0.9;
+}
+
+.centerInfo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+  padding: 10px;
+}
+
+.centerVal {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink-950);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.centerLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-500);
+  margin-top: 2px;
+}
+
+.legendList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.legendItem:hover {
+  background: #f7f9f7;
+  border-color: var(--line-200);
+}
+
+.legendLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendName {
+  font-weight: 600;
+  color: var(--ink-950);
+}
+
+.legendRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.legendValue {
+  font-weight: 700;
+  color: var(--ink-950);
+}
+
+.legendPct {
+  color: var(--ink-500);
+  font-size: 11px;
+}
+
+/* ---------------- Radial Progress Meter ---------------- */
+.radialWrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.radialSvg {
+  width: 84px;
+  height: 84px;
+  transform: rotate(-90deg);
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.radialTrack {
+  fill: none;
+  stroke: #e7ece8;
+  stroke-width: 9;
+}
+
+.radialProgress {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s var(--ease-out);
+}
+
+.radialContent {
+  flex: 1;
+}
+
+.radialTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: var(--ink-950);
+}
+
+.radialSubtitle {
+  font-size: 12px;
+  color: var(--ink-500);
+  margin: 0;
+}
+

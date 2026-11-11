@@ -53,15 +53,25 @@ export async function getEnquiriesFromFirestore(
 ): Promise<EnquiryRecord[]> {
   const database = requireDb();
   const col = collection(database, "enquiries");
-  const q = kind
-    ? query(col, where("kind", "==", kind), orderBy("createdAt", "desc"))
-    : query(col, orderBy("createdAt", "desc"));
+  try {
+    const q = kind
+      ? query(col, where("kind", "==", kind), orderBy("createdAt", "desc"))
+      : query(col, orderBy("createdAt", "desc"));
 
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<EnquiryRecord, "id">),
-  }));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<EnquiryRecord, "id">),
+    }));
+  } catch (err) {
+    console.warn("Retrying getEnquiries without orderBy:", err);
+    const fallbackQ = kind ? query(col, where("kind", "==", kind)) : col;
+    const snapshot = await getDocs(fallbackQ);
+    return snapshot.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<EnquiryRecord, "id">),
+    }));
+  }
 }
 
 /** Update the workflow state of a quote or contact request. */
@@ -77,8 +87,14 @@ export interface NewsletterSubscription {
 
 /** Fetch recent newsletter subscribers for the marketing workspace. */
 export async function getNewsletterSubscriptions(max = 250): Promise<NewsletterSubscription[]> {
-  const snapshot = await getDocs(query(collection(requireDb(), "subscribers"), orderBy("createdAt", "desc"), limit(max)));
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NewsletterSubscription, "id">) }));
+  const database = requireDb();
+  try {
+    const snapshot = await getDocs(query(collection(database, "subscribers"), orderBy("createdAt", "desc"), limit(max)));
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NewsletterSubscription, "id">) }));
+  } catch {
+    const snapshot = await getDocs(query(collection(database, "subscribers"), limit(max)));
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NewsletterSubscription, "id">) }));
+  }
 }
 
 export interface InventoryRecord {
@@ -168,8 +184,14 @@ export async function getOrderFromFirestore(orderId: string): Promise<OrderRecor
 /** Fetch the most recent orders for the operations dashboard. */
 export async function getOrdersFromFirestore(max = 100): Promise<OrderRecord[]> {
   const database = requireDb();
-  const snapshot = await getDocs(query(collection(database, "orders"), orderBy("createdAt", "desc"), limit(max)));
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderRecord, "id">) }));
+  try {
+    const snapshot = await getDocs(query(collection(database, "orders"), orderBy("createdAt", "desc"), limit(max)));
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderRecord, "id">) }));
+  } catch (err) {
+    console.warn("Retrying getOrders without orderBy:", err);
+    const snapshot = await getDocs(query(collection(database, "orders"), limit(max)));
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderRecord, "id">) }));
+  }
 }
 
 /** Advance an order through the fulfilment workflow. */

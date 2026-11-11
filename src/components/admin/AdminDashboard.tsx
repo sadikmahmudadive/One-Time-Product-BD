@@ -20,6 +20,9 @@ import {
   type OrderRecord,
 } from "@/lib/firebase/firestore";
 import { InvoiceModal } from "./InvoiceModal";
+import { DonutChart, type DonutSegment } from "./charts/DonutChart";
+import { RadialProgress } from "./charts/RadialProgress";
+import { CategoryPieChart } from "./charts/CategoryPieChart";
 import styles from "./admin.module.css";
 
 type Tab = "overview" | "orders" | "inventory" | "quotes" | "customers" | "media";
@@ -64,18 +67,52 @@ export function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
-      const [nextOrders, nextEnquiries, nextSubscribers, nextInventory] = await Promise.all([
+      const results = await Promise.allSettled([
         getOrdersFromFirestore(),
         getEnquiriesFromFirestore(),
         getNewsletterSubscriptions(),
         getInventoryFromFirestore(),
       ]);
-      setOrders(nextOrders);
-      setEnquiries(nextEnquiries);
-      setSubscribers(nextSubscribers);
-      setInventory(nextInventory);
-    } catch {
-      setError("Failed to load live data. Please check Firebase permissions.");
+
+      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes] = results;
+      const errors: string[] = [];
+
+      if (ordersRes.status === "fulfilled") {
+        setOrders(ordersRes.value);
+      } else {
+        console.error("Failed to load orders from Firestore:", ordersRes.reason);
+        errors.push(`orders (${ordersRes.reason?.code || ordersRes.reason?.message || "denied"})`);
+      }
+
+      if (enquiriesRes.status === "fulfilled") {
+        setEnquiries(enquiriesRes.value);
+      } else {
+        console.error("Failed to load enquiries from Firestore:", enquiriesRes.reason);
+        errors.push(`quotes (${enquiriesRes.reason?.code || enquiriesRes.reason?.message || "denied"})`);
+      }
+
+      if (subscribersRes.status === "fulfilled") {
+        setSubscribers(subscribersRes.value);
+      } else {
+        console.error("Failed to load subscribers from Firestore:", subscribersRes.reason);
+        errors.push(`subscribers (${subscribersRes.reason?.code || subscribersRes.reason?.message || "denied"})`);
+      }
+
+      if (inventoryRes.status === "fulfilled") {
+        setInventory(inventoryRes.value);
+      } else {
+        console.error("Failed to load inventory from Firestore:", inventoryRes.reason);
+        errors.push(`inventory (${inventoryRes.reason?.code || inventoryRes.reason?.message || "denied"})`);
+      }
+
+      if (errors.length > 0) {
+        setError(
+          `Firebase permission denied for: ${errors.join(", ")}. Please update your Firestore Security Rules in the Firebase Console.`
+        );
+      }
+    } catch (err) {
+      console.error("Unexpected error loading admin data:", err);
+      setError((err as Error).message || "Failed to load live data. Please check Firebase permissions.");
     } finally {
       setLoading(false);
     }
@@ -299,9 +336,14 @@ export function AdminDashboard() {
         {/* Workspace Body */}
         <main className={styles.content}>
           {error && (
-            <div className={`${styles.alertBar} ${styles.alertError}`} role="alert">
-              <span>{error}</span>
-              <button type="button" onClick={() => setError("")} style={{ border: "none", background: "none", cursor: "pointer" }}>✕</button>
+            <div className={`${styles.alertBar} ${styles.alertError}`} role="alert" style={{ flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                <span style={{ fontWeight: 700 }}>⚠️ {error}</span>
+                <button type="button" onClick={() => setError("")} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "inherit" }}>✕</button>
+              </div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, opacity: 0.9 }}>
+                To enable access for <strong>onetimeproductbd@gmail.com</strong>, publish the rules from <code>firestore.rules</code> in <strong>Firebase Console &rarr; Firestore Database &rarr; Rules</strong>.
+              </div>
             </div>
           )}
 
@@ -468,6 +510,13 @@ function OverviewView({
 }) {
   const avgOrder = orders.length > 0 ? revenue / Math.max(orders.length, 1) : 0;
 
+  const orderStatusSegments: DonutSegment[] = [
+    { label: "Pending", value: pendingOrders.length, color: "#F59E0B", formattedValue: `${pendingOrders.length} orders` },
+    { label: "Confirmed", value: confirmedOrders.length, color: "#0284C7", formattedValue: `${confirmedOrders.length} orders` },
+    { label: "Shipped", value: shippedOrders.length, color: "#10B981", formattedValue: `${shippedOrders.length} orders` },
+    { label: "Cancelled", value: orders.filter((o) => o.status === "cancelled").length, color: "#EF4444", formattedValue: `${orders.filter((o) => o.status === "cancelled").length} orders` },
+  ];
+
   return (
     <>
       <div className={styles.metricGrid}>
@@ -514,6 +563,81 @@ function OverviewView({
           <p className={styles.metricVal}>{newQuotes.length}</p>
           <p className={styles.metricSub}>New quotes awaiting pricing response</p>
         </div>
+      </div>
+
+      {/* ---------------- Round Charts & Visual Analytics ---------------- */}
+      <div className={styles.chartsGrid}>
+        <div className={styles.card} style={{ margin: 0 }}>
+          <div className={styles.cardHead}>
+            <div>
+              <h3 className={styles.cardTitle}>Order Pipeline Distribution</h3>
+              <p className={styles.cardSub}>Current order statuses across fulfilment lifecycle</p>
+            </div>
+            <button type="button" className={styles.pillBtn} onClick={() => setTab("orders")}>
+              Pipeline Details
+            </button>
+          </div>
+          <div style={{ padding: "24px" }}>
+            <DonutChart
+              data={orderStatusSegments}
+              centerValue={`${orders.length}`}
+              centerLabel="Orders Total"
+              size={170}
+            />
+          </div>
+        </div>
+
+        <div className={styles.card} style={{ margin: 0 }}>
+          <div className={styles.cardHead}>
+            <div>
+              <h3 className={styles.cardTitle}>Packaging Category Demand</h3>
+              <p className={styles.cardSub}>Units ordered across product families</p>
+            </div>
+            <button type="button" className={styles.pillBtn} onClick={() => setTab("inventory")}>
+              Catalogue Stock
+            </button>
+          </div>
+          <div style={{ padding: "24px" }}>
+            <CategoryPieChart orders={orders} />
+          </div>
+        </div>
+      </div>
+
+      {/* ---------------- Operational Radial Meters ---------------- */}
+      <div className={styles.radialGaugesGrid}>
+        <RadialProgress
+          percentage={
+            orders.length > 0
+              ? (shippedOrders.length / Math.max(orders.filter((o) => o.status !== "cancelled").length, 1)) * 100
+              : 100
+          }
+          label="Fulfilment Rate"
+          sublabel={`${shippedOrders.length} of ${Math.max(orders.filter((o) => o.status !== "cancelled").length, 0)} orders dispatched`}
+          color="#10B981"
+          size={84}
+        />
+        <RadialProgress
+          percentage={
+            PRODUCTS.length > 0
+              ? ((PRODUCTS.length - lowStockCount) / PRODUCTS.length) * 100
+              : 100
+          }
+          label="Stock Safety Index"
+          sublabel={`${PRODUCTS.length - lowStockCount} of ${PRODUCTS.length} products healthy`}
+          color={lowStockCount > 0 ? "#F59E0B" : "#059669"}
+          size={84}
+        />
+        <RadialProgress
+          percentage={
+            newQuotes.length > 0 || orders.length > 0
+              ? Math.min(100, Math.round(((confirmedOrders.length + shippedOrders.length) / Math.max(orders.length, 1)) * 100))
+              : 100
+          }
+          label="Conversion Velocity"
+          sublabel="Lead-to-fulfilment pipeline ratio"
+          color="#6366F1"
+          size={84}
+        />
       </div>
 
       {/* Operational Action Queues */}
@@ -912,8 +1036,52 @@ function InventoryView({
     }
   }
 
+  const inStockCount = PRODUCTS.filter((p) => {
+    const inv = inventory.find((i) => i.slug === p.slug);
+    const avail = inv?.available ?? 0;
+    const thresh = inv?.lowStockAt ?? 10;
+    return avail > thresh;
+  }).length;
+
+  const lowStockOnlyCount = PRODUCTS.filter((p) => {
+    const inv = inventory.find((i) => i.slug === p.slug);
+    const avail = inv?.available ?? 0;
+    const thresh = inv?.lowStockAt ?? 10;
+    return avail > 0 && avail <= thresh;
+  }).length;
+
+  const outOfStockCount = PRODUCTS.filter((p) => {
+    const inv = inventory.find((i) => i.slug === p.slug);
+    const avail = inv?.available ?? 0;
+    return avail === 0;
+  }).length;
+
+  const stockHealthSegments: DonutSegment[] = [
+    { label: "Optimal Stock", value: inStockCount, color: "#10B981", formattedValue: `${inStockCount} items` },
+    { label: "Low Stock Alert", value: lowStockOnlyCount, color: "#F59E0B", formattedValue: `${lowStockOnlyCount} items` },
+    { label: "Out of Stock", value: outOfStockCount, color: "#EF4444", formattedValue: `${outOfStockCount} items` },
+  ];
+
   return (
-    <div className={styles.card}>
+    <>
+      <div className={styles.card} style={{ marginBottom: 20 }}>
+        <div className={styles.cardHead}>
+          <div>
+            <h3 className={styles.cardTitle}>Inventory Health Distribution</h3>
+            <p className={styles.cardSub}>Catalogue replenishment and stock safety levels</p>
+          </div>
+        </div>
+        <div style={{ padding: 24 }}>
+          <DonutChart
+            data={stockHealthSegments}
+            centerValue={`${PRODUCTS.length}`}
+            centerLabel="Products Total"
+            size={160}
+          />
+        </div>
+      </div>
+
+      <div className={styles.card}>
       <div className={styles.cardHead}>
         <div>
           <h3 className={styles.cardTitle}>Warehouse Stock & Packaging Control</h3>
@@ -973,6 +1141,7 @@ function InventoryView({
         })}
       </div>
     </div>
+    </>
   );
 }
 

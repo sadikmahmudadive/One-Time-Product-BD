@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is the store administrator
+    function isAdmin() {
+      return request.auth != null && 
+        (request.auth.token.email == 'onetimeproductbd@gmail.com' ||
+         request.auth.token.email_verified == true && request.auth.token.email in ['onetimeproductbd@gmail.com']);
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      // Anyone can create an order from storefront checkout
+      allow create: if true;
+      // Admins can read, update status, and manage all orders
+      // Authenticated customers can read their own orders
+      allow read, update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+    }
+
+    // Enquiries / Quotes Collection
+    match /enquiries/{enquiryId} {
+      // Anyone can submit a quote or contact form enquiry
+      allow create: if true;
+      // Only admins can view, update, and manage enquiries
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Newsletter Subscribers
+    match /subscribers/{subscriberId} {
+      // Anyone can subscribe via footer
+      allow create: if true;
+      // Only admins can view subscribers
+      allow read, write: if isAdmin();
+    }
+
+    // Warehouse Inventory & Stock Levels
+    match /inventory/{slug} {
+      // Anyone can read stock levels (in stock / low stock badges)
+      allow read: if true;
+      // Only admins can update stock counts, thresholds, and product images
+      allow write: if isAdmin();
+    }
+  }
+}
+
