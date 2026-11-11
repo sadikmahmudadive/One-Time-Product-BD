@@ -103,6 +103,7 @@ export function Catalog({ category }: { category?: CategoryId }) {
               <ProductCard
                 name={p.name}
                 kind={p.kind}
+                image={p.image}
                 href={`/product/${p.slug}`}
                 badge={p.tags.includes("new") ? "new" : undefined}
                 meta={packSummary(p)}

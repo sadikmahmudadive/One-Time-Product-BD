@@ -7,6 +7,7 @@ import { ProductPurchase } from "@/components/commerce/ProductPurchase";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { CheckIcon } from "@/components/ui/Icons";
 import { ProductShape } from "@/components/ui/ProductShape";
+import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import { PRODUCTS, getCategory, getProduct, hasVariants, isDirectBuy, packSummary, priceLabel } from "@/lib/catalog";
 import type { Product } from "@/lib/catalog";
 import styles from "./page.module.css";
@@ -80,9 +81,20 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               </Link>
             </div>
             <div className={styles.shape}>
-              <ProductShape kind={product.kind} />
+              {product.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={buildCloudinaryUrl(product.image, { width: 800, height: 800, crop: "fill" })}
+                  alt={product.name}
+                  style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
+                />
+              ) : (
+                <ProductShape kind={product.kind} />
+              )}
             </div>
-            <p className={styles.caption}>Illustration — product photography to follow.</p>
+            <p className={styles.caption}>
+              {product.image ? "Product photography." : "Illustration — product photography to follow."}
+            </p>
           </div>
         </div>
 
@@ -171,6 +183,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               <ProductCard
                 name={p.name}
                 kind={p.kind}
+                image={p.image}
                 href={`/product/${p.slug}`}
                 meta={packSummary(p)}
                 price={priceLabel(p)}

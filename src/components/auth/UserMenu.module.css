@@ -1,0 +1,141 @@
+.container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.signInBtn {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(231, 241, 235, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font: 600 13px/1 var(--font-inter), system-ui, sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.signInBtn:hover {
+  background: rgba(231, 241, 235, 0.12);
+  border-color: rgba(231, 241, 235, 0.6);
+}
+
+.avatarBtn {
+  background: transparent;
+  border: 1px solid rgba(231, 241, 235, 0.3);
+  border-radius: 50%;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.avatarBtn:hover {
+  border-color: var(--accent-500);
+  transform: scale(1.04);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--brand-700);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 240px;
+  background: var(--surface-0);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-floating);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 100;
+  animation: popIn 0.2s ease-out;
+}
+
+.userInfo {
+  padding: 8px 10px 12px;
+  border-bottom: 1px solid var(--line-200);
+  margin-bottom: 4px;
+}
+
+.userName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-950);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-950);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.item:hover {
+  background: var(--surface-100);
+  color: var(--brand-700);
+}
+
+.itemDanger {
+  color: var(--danger-700);
+}
+
+.itemDanger:hover {
+  background: #fdf2f2;
+  color: var(--danger-700);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

@@ -76,6 +76,7 @@ export function ShopSection() {
                 <ProductCard
                   name={p.name}
                   kind={p.kind}
+                  image={p.image}
                   href={href}
                   badge={tab === "new" ? "new" : "in-stock"}
                   price={priceLabel(p)}

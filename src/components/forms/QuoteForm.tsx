@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
+import { useAuth } from "@/lib/firebase/auth-context";
 import { getProduct } from "@/lib/catalog";
 import { submitEnquiry } from "@/lib/submit";
 import { FormSuccess } from "./FormSuccess";
@@ -13,6 +14,7 @@ type Status = "idle" | "sending" | "sent" | "error";
 export function QuoteForm() {
   const params = useSearchParams();
   const { ready, lines } = useCart();
+  const { user } = useAuth();
   const [products, setProducts] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const edited = useRef(false);
@@ -67,7 +69,7 @@ export function QuoteForm() {
         <label className="lbl" htmlFor="qf-name">
           Your name <span className={styles.req}>*</span>
         </label>
-        <input className="field" id="qf-name" name="name" type="text" autoComplete="name" required />
+        <input className="field" id="qf-name" name="name" type="text" autoComplete="name" required defaultValue={user?.displayName ?? ""} key={`quote-name-${user?.uid ?? "guest"}`} />
       </div>
       <div>
         <label className="lbl" htmlFor="qf-biz">
@@ -85,7 +87,7 @@ export function QuoteForm() {
         <label className="lbl" htmlFor="qf-email">
           Email
         </label>
-        <input className="field" id="qf-email" name="email" type="email" autoComplete="email" />
+        <input className="field" id="qf-email" name="email" type="email" autoComplete="email" defaultValue={user?.email ?? ""} key={`quote-email-${user?.uid ?? "guest"}`} />
       </div>
       <div className={styles.full}>
         <label className="lbl" htmlFor="qf-products">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/lib/firebase/auth-context";
 import { submitEnquiry } from "@/lib/submit";
 import { FormSuccess } from "./FormSuccess";
 import styles from "./forms.module.css";
@@ -8,6 +9,7 @@ import styles from "./forms.module.css";
 type Status = "idle" | "sending" | "sent" | "error";
 
 export function ContactForm() {
+  const { user } = useAuth();
   const [status, setStatus] = useState<Status>("idle");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -36,7 +38,7 @@ export function ContactForm() {
         <label className="lbl" htmlFor="cf-name">
           Your name <span className={styles.req}>*</span>
         </label>
-        <input className="field" id="cf-name" name="name" type="text" autoComplete="name" required />
+        <input className="field" id="cf-name" name="name" type="text" autoComplete="name" required defaultValue={user?.displayName ?? ""} key={`contact-name-${user?.uid ?? "guest"}`} />
       </div>
       <div>
         <label className="lbl" htmlFor="cf-phone">
@@ -48,7 +50,7 @@ export function ContactForm() {
         <label className="lbl" htmlFor="cf-email">
           Email
         </label>
-        <input className="field" id="cf-email" name="email" type="email" autoComplete="email" />
+        <input className="field" id="cf-email" name="email" type="email" autoComplete="email" defaultValue={user?.email ?? ""} key={`contact-email-${user?.uid ?? "guest"}`} />
       </div>
       <div className={styles.full}>
         <label className="lbl" htmlFor="cf-msg">

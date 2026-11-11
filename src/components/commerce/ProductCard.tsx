@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { ProductShape } from "@/components/ui/ProductShape";
+import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import type { ShapeKind } from "@/lib/content";
 import styles from "./ProductCard.module.css";
 
 interface ProductCardProps {
   name: string;
   kind: ShapeKind;
+  /** Cloudinary public ID or image URL */
+  image?: string;
   /** Product page the image and title lead to. */
   href: string;
   /** Corner badge over the image. */
@@ -22,7 +25,7 @@ interface ProductCardProps {
   action: React.ReactNode;
 }
 
-export function ProductCard({ name, kind, href, badge, meta, price, unit, variants, action }: ProductCardProps) {
+export function ProductCard({ name, kind, image, href, badge, meta, price, unit, variants, action }: ProductCardProps) {
   return (
     <article className={styles.card}>
       <Link href={href} className={styles.media} aria-label={name} tabIndex={-1}>
@@ -34,7 +37,17 @@ export function ProductCard({ name, kind, href, badge, meta, price, unit, varian
           </span>
         )}
         <div className={styles.img}>
-          <ProductShape kind={kind} />
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={buildCloudinaryUrl(image, { width: 440, height: 440, crop: "fill" })}
+              alt={name}
+              loading="lazy"
+              style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
+            />
+          ) : (
+            <ProductShape kind={kind} />
+          )}
         </div>
       </Link>
       <div className={styles.body}>

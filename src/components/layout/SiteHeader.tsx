@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useCart } from "@/components/cart/CartProvider";
 import { MenuIcon, SearchIcon } from "@/components/ui/Icons";
 import { Logo } from "@/components/ui/Logo";
@@ -52,6 +53,7 @@ export function SiteHeader() {
             <span>Cart</span>
             <span className={styles.cartCount}>{count}</span>
           </Link>
+          <UserMenu />
           <button
             className={`${styles.iconBtn} ${styles.menuBtn}`}
             type="button"
