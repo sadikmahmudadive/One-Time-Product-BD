@@ -85,6 +85,7 @@ export interface InventoryRecord {
   slug: string;
   available: number;
   lowStockAt: number;
+  imageUrl?: string;
   updatedAt?: unknown;
 }
 
@@ -94,8 +95,21 @@ export async function getInventoryFromFirestore(): Promise<InventoryRecord[]> {
   return snapshot.docs.map((d) => ({ slug: d.id, ...(d.data() as Omit<InventoryRecord, "slug">) }));
 }
 
-export async function saveInventoryToFirestore(slug: string, available: number, lowStockAt: number): Promise<void> {
-  await setDoc(doc(requireDb(), "inventory", slug), { available, lowStockAt, updatedAt: serverTimestamp() }, { merge: true });
+export async function saveInventoryToFirestore(
+  slug: string,
+  available: number,
+  lowStockAt: number,
+  imageUrl?: string
+): Promise<void> {
+  const data: Record<string, unknown> = {
+    available,
+    lowStockAt,
+    updatedAt: serverTimestamp(),
+  };
+  if (imageUrl !== undefined) {
+    data.imageUrl = imageUrl;
+  }
+  await setDoc(doc(requireDb(), "inventory", slug), data, { merge: true });
 }
 
 /** Save email subscriber to Firestore */

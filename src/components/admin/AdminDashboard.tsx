@@ -1,36 +1,1461 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { PRODUCTS, priceLabel } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
-import { getEnquiriesFromFirestore, getInventoryFromFirestore, getNewsletterSubscriptions, getOrdersFromFirestore, saveInventoryToFirestore, updateEnquiryStatus, updateOrderStatus, type EnquiryRecord, type InventoryRecord, type NewsletterSubscription, type OrderRecord } from "@/lib/firebase/firestore";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { uploadClientImage } from "@/lib/cloudinary/client";
+import {
+  getEnquiriesFromFirestore,
+  getInventoryFromFirestore,
+  getNewsletterSubscriptions,
+  getOrdersFromFirestore,
+  saveInventoryToFirestore,
+  updateEnquiryStatus,
+  updateOrderStatus,
+  type EnquiryRecord,
+  type InventoryRecord,
+  type NewsletterSubscription,
+  type OrderRecord,
+} from "@/lib/firebase/firestore";
+import { InvoiceModal } from "./InvoiceModal";
 import styles from "./admin.module.css";
 
-type Tab = "overview" | "orders" | "products" | "customers" | "messages";
+type Tab = "overview" | "orders" | "inventory" | "quotes" | "customers" | "media";
 type OrderFilter = "all" | OrderRecord["status"];
-function date(value: unknown) { if (!value || typeof value !== "object" || !("toDate" in value)) return "Just now"; return (value as { toDate: () => Date }).toDate().toLocaleDateString("en-GB", { day: "numeric", month: "short" }); }
-function exportCsv(name: string, rows: Record<string, string | number | null | undefined>[]) { if (!rows.length) return; const keys = Object.keys(rows[0]); const quote = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`; const csv = [keys.join(","), ...rows.map((row) => keys.map((key) => quote(row[key])).join(","))].join("\n"); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); link.download = `${name}.csv`; link.click(); URL.revokeObjectURL(link.href); }
-const tabs: { id: Tab; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "orders", label: "Orders" }, { id: "products", label: "Products & stock" }, { id: "customers", label: "Customers" }, { id: "messages", label: "Messages" }];
 
-export function AdminDashboard() {
-  const [tab, setTab] = useState<Tab>("overview"); const [orders, setOrders] = useState<OrderRecord[]>([]); const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]); const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]); const [inventory, setInventory] = useState<InventoryRecord[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [orderFilter, setOrderFilter] = useState<OrderFilter>("all"); const [search, setSearch] = useState("");
-  const load = useCallback(async () => { setLoading(true); setError(""); try { const [nextOrders, nextEnquiries, nextSubscribers, nextInventory] = await Promise.all([getOrdersFromFirestore(), getEnquiriesFromFirestore(), getNewsletterSubscriptions(), getInventoryFromFirestore()]); setOrders(nextOrders); setEnquiries(nextEnquiries); setSubscribers(nextSubscribers); setInventory(nextInventory); } catch { setError("Live data could not be loaded. Confirm that Firestore permissions let approved administrators access orders, enquiries, subscribers and inventory."); } finally { setLoading(false); } }, []);
-  useEffect(() => { load(); }, [load]);
-  const stockFor = (slug: string) => inventory.find((item) => item.slug === slug);
-  const revenue = orders.filter((order) => order.status !== "cancelled").reduce((sum, order) => sum + (order.totalPrice ?? 0), 0); const fulfilled = orders.filter((order) => order.status === "shipped").length; const counted = orders.filter((order) => order.status !== "cancelled"); const averageOrder = counted.length ? revenue / counted.length : 0;
-  const filteredOrders = orders.filter((order) => { const matchesStatus = orderFilter === "all" || order.status === orderFilter; const query = search.toLowerCase(); const matchesSearch = !query || order.customer.name.toLowerCase().includes(query) || order.customer.phone.includes(query) || order.id?.toLowerCase().includes(query); return matchesStatus && matchesSearch; });
-  const customers = useMemo(() => { const records = new Map<string, { name: string; contact: string; district: string; orders: number; spend: number }>(); orders.forEach((order) => { const key = order.customer.phone || order.customer.email || order.customer.name; const current = records.get(key) ?? { name: order.customer.name, contact: order.customer.phone || order.customer.email || "—", district: order.customer.district, orders: 0, spend: 0 }; current.orders += 1; current.spend += order.totalPrice ?? 0; records.set(key, current); }); return [...records.values()].sort((a, b) => b.spend - a.spend); }, [orders]);
-  async function changeOrder(id: string, status: OrderRecord["status"]) { try { await updateOrderStatus(id, status); setOrders((rows) => rows.map((row) => row.id === id ? { ...row, status } : row)); setNotice("Order status saved."); } catch { setError("The order status could not be saved."); } }
-  async function changeEnquiry(id: string, status: EnquiryRecord["status"]) { try { await updateEnquiryStatus(id, status); setEnquiries((rows) => rows.map((row) => row.id === id ? { ...row, status } : row)); setNotice("Message status saved."); } catch { setError("The message status could not be saved."); } }
-  async function saveStock(slug: string, available: number, lowStockAt: number) { try { await saveInventoryToFirestore(slug, available, lowStockAt); setInventory((items) => [...items.filter((item) => item.slug !== slug), { slug, available, lowStockAt }]); setNotice("Stock level saved."); } catch { setError("The stock level could not be saved."); } }
-  return <><section className={styles.intro}><div><p className={styles.kicker}>Commerce workspace</p><h1>Store operations, in one clear view.</h1><p>Manage incoming orders, product stock, customer relationships and sales follow-up from a single dashboard.</p></div><button className="btn btn-secondary" onClick={load} disabled={loading}>{loading ? "Refreshing…" : "Refresh data"}</button></section><nav className={styles.workspaceNav} aria-label="Dashboard sections">{tabs.map((item) => <button key={item.id} className={tab === item.id ? styles.activeTab : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</nav>{error && <p className={styles.alert} role="alert">{error}</p>}{notice && <p className={styles.success} role="status">{notice} <button onClick={() => setNotice("")} aria-label="Dismiss">×</button></p>}{tab === "overview" && <Overview orders={orders} enquiries={enquiries} revenue={revenue} fulfilled={fulfilled} averageOrder={averageOrder} loading={loading} setTab={setTab} />}{tab === "orders" && <OrdersPanel rows={filteredOrders} allRows={orders} filter={orderFilter} setFilter={setOrderFilter} search={search} setSearch={setSearch} onChange={changeOrder} onExport={() => exportCsv("orders", orders.map((order) => ({ id: order.id, customer: order.customer.name, phone: order.customer.phone, district: order.customer.district, total_bdt: order.totalPrice, status: order.status, created: date(order.createdAt) })))} loading={loading} />}{tab === "products" && <ProductsPanel stockFor={stockFor} onSave={saveStock} />}{tab === "customers" && <CustomersPanel customers={customers} subscribers={subscribers} onExport={() => exportCsv("customers", customers.map((customer) => ({ name: customer.name, contact: customer.contact, district: customer.district, orders: customer.orders, spend_bdt: customer.spend })))} />}{tab === "messages" && <MessagesPanel entries={enquiries} onChange={changeEnquiry} loading={loading} />}</>;
+function formatDate(value: unknown) {
+  if (!value || typeof value !== "object" || !("toDate" in value)) return "Just now";
+  return (value as { toDate: () => Date }).toDate().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function Overview({ orders, enquiries, revenue, fulfilled, averageOrder, loading, setTab }: { orders: OrderRecord[]; enquiries: EnquiryRecord[]; revenue: number; fulfilled: number; averageOrder: number; loading: boolean; setTab: (tab: Tab) => void }) { const pending = orders.filter((order) => order.status === "pending").length; const newMessages = enquiries.filter((entry) => entry.status === "new").length; const max = Math.max(...orders.map((order) => order.totalPrice ?? 0), 1); return <><section className={styles.stats} aria-label="Store statistics"><article><span>Order value</span><strong>{formatPrice(revenue)}</strong><small>Excludes cancelled orders</small></article><article><span>Average order</span><strong>{formatPrice(averageOrder)}</strong><small>Across confirmed order requests</small></article><article><span>Fulfilled orders</span><strong>{fulfilled}</strong><small>Out of {orders.length} total</small></article><article><span>New messages</span><strong>{newMessages}</strong><small>Quotes and contact requests</small></article></section><section className={styles.overviewGrid}><article className={styles.panel}><div className={styles.panelHead}><div><p className={styles.kicker}>Sales pulse</p><h2>Recent order value</h2></div><button className={styles.textLink} onClick={() => setTab("orders")}>Open orders</button></div>{loading ? <p className={styles.muted}>Loading live orders…</p> : orders.length ? <div className={styles.bars}>{orders.slice(0, 7).reverse().map((order) => <div key={order.id} className={styles.bar}><span style={{ height: `${Math.max(8, ((order.totalPrice ?? 0) / max) * 100)}%` }} title={formatPrice(order.totalPrice ?? 0)} /><small>{date(order.createdAt)}</small></div>)}</div> : <Empty title="No orders yet" text="Order performance will appear here as soon as customers check out." action="View products" onAction={() => setTab("products")} />}</article><article className={styles.panel}><div className={styles.panelHead}><div><p className={styles.kicker}>Needs attention</p><h2>Today’s queue</h2></div></div><ul className={styles.queue}><li><span className={styles.count}>{pending}</span><div><b>Orders to review</b><small>Confirm price, delivery and payment details.</small></div><button className={styles.textLink} onClick={() => setTab("orders")}>Review</button></li><li><span className={styles.count}>{newMessages}</span><div><b>New customer requests</b><small>Quote and contact messages awaiting a reply.</small></div><button className={styles.textLink} onClick={() => setTab("messages")}>Open</button></li></ul></article></section></>; }
-function OrdersPanel({ rows, allRows, filter, setFilter, search, setSearch, onChange, onExport, loading }: { rows: OrderRecord[]; allRows: OrderRecord[]; filter: OrderFilter; setFilter: (filter: OrderFilter) => void; search: string; setSearch: (query: string) => void; onChange: (id: string, status: OrderRecord["status"]) => void; onExport: () => void; loading: boolean }) { return <section className={styles.section}><div className={styles.sectionHead}><div><p className={styles.kicker}>Sales queue</p><h2>Orders</h2></div><button className="btn btn-secondary" onClick={onExport} disabled={!allRows.length}>Export CSV</button></div><div className={styles.toolbar}><input className="field" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search customer, phone or order ID" aria-label="Search orders" /><div className={styles.filters}>{(["all", "pending", "confirmed", "shipped", "cancelled"] as OrderFilter[]).map((item) => <button key={item} className={filter === item ? styles.filterOn : ""} onClick={() => setFilter(item)}>{item === "all" ? `All (${allRows.length})` : `${item[0].toUpperCase()}${item.slice(1)}`}</button>)}</div></div>{!loading && !rows.length ? <Empty title="No matching orders" text="Try clearing the search or select a different status." /> : <div className={styles.tableWrap}><table><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody>{rows.map((order) => <tr key={order.id}><td><b>#{order.id?.slice(-7).toUpperCase()}</b><small>{date(order.createdAt)}</small></td><td>{order.customer.name}<small>{order.customer.phone} · {order.customer.district}</small></td><td><details><summary>{order.items.reduce((sum, item) => sum + item.qty, 0)} items</summary><ul className={styles.lineItems}>{order.items.map((item) => <li key={`${item.slug}-${item.variantId}`}>{item.qty} × {item.name}{item.variantLabel ? ` (${item.variantLabel})` : ""}</li>)}</ul></details></td><td>{order.totalPrice === null ? "On request" : formatPrice(order.totalPrice)}</td><td><select value={order.status} onChange={(event) => order.id && onChange(order.id, event.target.value as OrderRecord["status"])} aria-label={`Order ${order.id} status`}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="shipped">Shipped</option><option value="cancelled">Cancelled</option></select></td></tr>)}</tbody></table></div>}</section>; }
-function ProductsPanel({ stockFor, onSave }: { stockFor: (slug: string) => InventoryRecord | undefined; onSave: (slug: string, available: number, lowStockAt: number) => void }) { const [search, setSearch] = useState(""); const products = PRODUCTS.filter((product) => product.name.toLowerCase().includes(search.toLowerCase())); return <section className={styles.section}><div className={styles.sectionHead}><div><p className={styles.kicker}>Catalogue and fulfilment</p><h2>Products & stock</h2></div><Link href="/shop" className="btn btn-secondary">View storefront</Link></div><p className={styles.helper}>Product names, prices and descriptions come from the storefront catalogue. Stock levels below are stored in Firestore for your operations team.</p><div className={styles.productSearch}><input className="field" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search catalogue" aria-label="Search catalogue" /></div><div className={styles.productGrid}>{products.map((product) => <StockCard key={product.slug} name={product.name} category={product.category} price={priceLabel(product)} stock={stockFor(product.slug)} onSave={(available, lowStockAt) => onSave(product.slug, available, lowStockAt)} />)}</div></section>; }
-function StockCard({ name, category, price, stock, onSave }: { name: string; category: string; price: string; stock?: InventoryRecord; onSave: (available: number, lowStockAt: number) => void }) { const [available, setAvailable] = useState(stock?.available ?? 0); const [threshold, setThreshold] = useState(stock?.lowStockAt ?? 10); useEffect(() => { setAvailable(stock?.available ?? 0); setThreshold(stock?.lowStockAt ?? 10); }, [stock]); const low = available <= threshold; return <article className={styles.productCard}><div><span className={styles.category}>{category.replaceAll("-", " ")}</span><h3>{name}</h3><p>{price}</p></div><div className={styles.stockFields}><label><span>Available</span><input type="number" min="0" value={available} onChange={(event) => setAvailable(Math.max(0, Number(event.target.value)))} /></label><label><span>Low at</span><input type="number" min="0" value={threshold} onChange={(event) => setThreshold(Math.max(0, Number(event.target.value)))} /></label></div><div className={styles.stockFoot}><span className={low ? styles.lowStock : styles.inStock}>{low ? "Low stock" : "In stock"}</span><button className={styles.textLink} onClick={() => onSave(available, threshold)}>Save stock</button></div></article>; }
-function CustomersPanel({ customers, subscribers, onExport }: { customers: { name: string; contact: string; district: string; orders: number; spend: number }[]; subscribers: NewsletterSubscription[]; onExport: () => void }) { return <section className={styles.section}><div className={styles.sectionHead}><div><p className={styles.kicker}>Relationships</p><h2>Customers & audience</h2></div><button className="btn btn-secondary" onClick={onExport} disabled={!customers.length}>Export customers</button></div><section className={styles.customerStats}><article><b>{customers.length}</b><span>Customers with orders</span></article><article><b>{subscribers.length}</b><span>Newsletter subscribers</span></article><article><b>{customers.filter((customer) => customer.orders > 1).length}</b><span>Returning customers</span></article></section>{!customers.length ? <Empty title="Customer profiles will appear here" text="A profile is created automatically when a customer places an order." /> : <div className={styles.tableWrap}><table><thead><tr><th>Customer</th><th>Contact</th><th>Location</th><th>Orders</th><th>Order value</th></tr></thead><tbody>{customers.map((customer) => <tr key={customer.contact}><td><b>{customer.name}</b></td><td>{customer.contact}</td><td>{customer.district}</td><td>{customer.orders}</td><td>{formatPrice(customer.spend)}</td></tr>)}</tbody></table></div>}</section>; }
-function MessagesPanel({ entries, onChange, loading }: { entries: EnquiryRecord[]; onChange: (id: string, status: EnquiryRecord["status"]) => void; loading: boolean }) { return <section className={styles.section}><div className={styles.sectionHead}><div><p className={styles.kicker}>Customer messages</p><h2>Quotes & contact requests</h2></div><span>{entries.length} total</span></div>{!loading && !entries.length ? <Empty title="No messages yet" text="Quote and contact requests will land here." /> : <div className={styles.cards}>{entries.map((entry) => <article key={entry.id} className={styles.enquiry}><div><b>{entry.kind === "quote" ? "Bulk quote" : "Contact request"}</b><small>{date(entry.createdAt)}</small></div><h3>{entry.data.name || "Unnamed customer"}</h3><p>{entry.data.products || entry.data.message || "No message supplied."}</p><footer><span>{entry.data.phone || entry.data.email || "No contact supplied"}</span><select value={entry.status} onChange={(event) => entry.id && onChange(entry.id, event.target.value as EnquiryRecord["status"])} aria-label={`Enquiry ${entry.id} status`}><option value="new">New</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="archived">Archived</option></select></footer></article>)}</div>}</section>; }
-function Empty({ title, text, action, onAction }: { title: string; text: string; action?: string; onAction?: () => void }) { return <div className={styles.blank}><b>{title}</b><p>{text}</p>{action && onAction && <button className="btn btn-secondary" onClick={onAction}>{action}</button>}</div>; }
+function exportCsv(name: string, rows: Record<string, string | number | null | undefined>[]) {
+  if (!rows.length) return;
+  const keys = Object.keys(rows[0]);
+  const quote = (val: unknown) => `"${String(val ?? "").replaceAll('"', '""')}"`;
+  const csv = [keys.join(","), ...rows.map((row) => keys.map((key) => quote(row[key])).join(","))].join("\n");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  link.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+export function AdminDashboard() {
+  const { user, logOut } = useAuth();
+  const [tab, setTab] = useState<Tab>("overview");
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
+  const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]);
+  const [inventory, setInventory] = useState<InventoryRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [search, setSearch] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState<OrderRecord | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [nextOrders, nextEnquiries, nextSubscribers, nextInventory] = await Promise.all([
+        getOrdersFromFirestore(),
+        getEnquiriesFromFirestore(),
+        getNewsletterSubscriptions(),
+        getInventoryFromFirestore(),
+      ]);
+      setOrders(nextOrders);
+      setEnquiries(nextEnquiries);
+      setSubscribers(nextSubscribers);
+      setInventory(nextInventory);
+    } catch {
+      setError("Failed to load live data. Please check Firebase permissions.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Derived stats
+  const revenue = orders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + (o.totalPrice ?? 0), 0);
+  const pendingOrders = orders.filter((o) => o.status === "pending");
+  const confirmedOrders = orders.filter((o) => o.status === "confirmed");
+  const shippedOrders = orders.filter((o) => o.status === "shipped");
+  const newQuotes = enquiries.filter((e) => e.status === "new");
+
+  const totalStockUnits = PRODUCTS.reduce((sum, p) => {
+    const inv = inventory.find((i) => i.slug === p.slug);
+    return sum + (inv?.available ?? 0);
+  }, 0);
+
+  const lowStockCount = PRODUCTS.filter((p) => {
+    const inv = inventory.find((i) => i.slug === p.slug);
+    const available = inv?.available ?? 0;
+    const threshold = inv?.lowStockAt ?? 10;
+    return available <= threshold;
+  }).length;
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesStatus = orderFilter === "all" || order.status === orderFilter;
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        order.id?.toLowerCase().includes(q) ||
+        order.customer.name.toLowerCase().includes(q) ||
+        order.customer.phone.includes(q) ||
+        order.customer.district.toLowerCase().includes(q);
+      return matchesStatus && matchesSearch;
+    });
+  }, [orders, orderFilter, search]);
+
+  const customerList = useMemo(() => {
+    const map = new Map<
+      string,
+      { name: string; contact: string; district: string; orders: number; spend: number; lastOrder: unknown }
+    >();
+
+    orders.forEach((o) => {
+      const key = o.customer.phone || o.customer.email || o.customer.name;
+      const curr = map.get(key) ?? {
+        name: o.customer.name,
+        contact: o.customer.phone || o.customer.email || "—",
+        district: o.customer.district,
+        orders: 0,
+        spend: 0,
+        lastOrder: o.createdAt,
+      };
+      curr.orders += 1;
+      curr.spend += o.totalPrice ?? 0;
+      map.set(key, curr);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.spend - a.spend);
+  }, [orders]);
+
+  async function handleOrderStatusChange(id: string, status: OrderRecord["status"]) {
+    try {
+      await updateOrderStatus(id, status);
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+      setNotice(`Order #${id.slice(-7).toUpperCase()} marked as ${status}.`);
+    } catch {
+      setError("Failed to update order status.");
+    }
+  }
+
+  async function handleEnquiryStatusChange(id: string, status: EnquiryRecord["status"]) {
+    try {
+      await updateEnquiryStatus(id, status);
+      setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+      setNotice("Inquiry status updated.");
+    } catch {
+      setError("Failed to update inquiry status.");
+    }
+  }
+
+  async function handleSaveStock(slug: string, available: number, lowStockAt: number, imageUrl?: string) {
+    try {
+      await saveInventoryToFirestore(slug, available, lowStockAt, imageUrl);
+      setInventory((prev) => {
+        const filtered = prev.filter((i) => i.slug !== slug);
+        return [...filtered, { slug, available, lowStockAt, imageUrl }];
+      });
+      setNotice("Inventory record saved.");
+    } catch {
+      setError("Failed to save inventory.");
+    }
+  }
+
+  return (
+    <div className={styles.layout}>
+      {/* ---------------- Sidebar Navigation ---------------- */}
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarBrand}>
+          <Link href="/admin" className={styles.brandLink}>
+            <span>ONETIME</span> ERP
+          </Link>
+          <span className={styles.liveBadge}>
+            <span className={styles.liveDot} /> Live
+          </span>
+        </div>
+
+        <nav className={styles.sidebarNav}>
+          <div className={styles.navGroup}>
+            <span className={styles.navHeading}>Core Commerce</span>
+            <button
+              type="button"
+              className={`${styles.navItem} ${tab === "overview" ? styles.activeNavItem : ""}`}
+              onClick={() => setTab("overview")}
+            >
+              <span className={styles.navItemLeft}>📊 Overview & KPIs</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.navItem} ${tab === "orders" ? styles.activeNavItem : ""}`}
+              onClick={() => setTab("orders")}
+            >
+              <span className={styles.navItemLeft}>📦 Fulfilment & Orders</span>
+              {pendingOrders.length > 0 && (
+                <span className={styles.navBadge}>{pendingOrders.length}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`${styles.navItem} ${tab === "quotes" ? styles.activeNavItem : ""}`}
+              onClick={() => setTab("quotes")}
+            >
+              <span className={styles.navItemLeft}>💼 B2B Wholesale Leads</span>
+              {newQuotes.length > 0 && (
+                <span className={styles.navBadge}>{newQuotes.length}</span>
+              )}
+            </button>
+          </div>
+
+          <div className={styles.navGroup}>
+            <span className={styles.navHeading}>Supply & Warehouse</span>
+            <button
+              type="button"
+              className={`${styles.navItem} ${tab === "inventory" ? styles.activeNavItem : ""}`}
+              onClick={() => setTab("inventory")}
+            >
+              <span className={styles.navItemLeft}>🏭 Stock & Packaging ERP</span>
+              {lowStockCount > 0 && (
+                <span className={`${styles.navBadge} ${styles.navBadgeAlert}`}>{lowStockCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`${styles.navItem} ${tab === "media" ? styles.activeNavItem : ""}`}
+              onClick={() => setTab("media")}
+            >
+              <span className={styles.navItemLeft}>☁️ Cloudinary Media Hub</span>
+            </button>
+          </div>
+
+          <div className={styles.navGroup}>
+            <span className={styles.navHeading}>Relationships & CRM</span>
+            <button
+              type="button"
+              className={`${styles.navItem} ${tab === "customers" ? styles.activeNavItem : ""}`}
+              onClick={() => setTab("customers")}
+            >
+              <span className={styles.navItemLeft}>👥 Customers & LTV</span>
+            </button>
+          </div>
+        </nav>
+
+        <div className={styles.sidebarFooter}>
+          <div className={styles.adminUser}>
+            <div className={styles.adminAvatar}>
+              {(user?.displayName || user?.email || "A")[0].toUpperCase()}
+            </div>
+            <div className={styles.adminDetails}>
+              <p className={styles.adminRole}>Admin Operations</p>
+              <p className={styles.adminEmail}>{user?.email}</p>
+            </div>
+          </div>
+          <button type="button" className={styles.logoutBtn} onClick={() => logOut()} title="Sign out">
+            ⎋
+          </button>
+        </div>
+      </aside>
+
+      {/* ---------------- Main Content Workspace ---------------- */}
+      <div className={styles.mainContainer}>
+        {/* Top Header Bar */}
+        <header className={styles.topBar}>
+          <div className={styles.topBarLeft}>
+            <h1 className={styles.pageTitle}>
+              {tab === "overview" && "Executive Dashboard"}
+              {tab === "orders" && "Order Fulfilment Pipeline"}
+              {tab === "inventory" && "Warehouse Inventory & Packaging ERP"}
+              {tab === "quotes" && "Wholesale & Custom Quotations"}
+              {tab === "customers" && "Customer CRM & Lifetime Value"}
+              {tab === "media" && "Cloudinary Media Asset Storage"}
+            </h1>
+          </div>
+
+          <div className={styles.topBarRight}>
+            <button type="button" className={styles.pillBtn} onClick={loadData} disabled={loading}>
+              {loading ? "Syncing…" : "🔄 Refresh"}
+            </button>
+            <Link href="/shop" className={`${styles.pillBtn} ${styles.primaryPill}`} target="_blank">
+              ↗ Live Storefront
+            </Link>
+          </div>
+        </header>
+
+        {/* Workspace Body */}
+        <main className={styles.content}>
+          {error && (
+            <div className={`${styles.alertBar} ${styles.alertError}`} role="alert">
+              <span>{error}</span>
+              <button type="button" onClick={() => setError("")} style={{ border: "none", background: "none", cursor: "pointer" }}>✕</button>
+            </div>
+          )}
+
+          {notice && (
+            <div className={`${styles.alertBar} ${styles.alertSuccess}`} role="status">
+              <span>{notice}</span>
+              <button type="button" onClick={() => setNotice("")} style={{ border: "none", background: "none", cursor: "pointer" }}>✕</button>
+            </div>
+          )}
+
+          {/* TAB 1: OVERVIEW & KPIS */}
+          {tab === "overview" && (
+            <OverviewView
+              orders={orders}
+              revenue={revenue}
+              pendingOrders={pendingOrders}
+              confirmedOrders={confirmedOrders}
+              shippedOrders={shippedOrders}
+              totalStockUnits={totalStockUnits}
+              lowStockCount={lowStockCount}
+              newQuotes={newQuotes}
+              setTab={setTab}
+              onSelectInvoice={setSelectedInvoice}
+            />
+          )}
+
+          {/* TAB 2: ORDERS & FULFILMENT */}
+          {tab === "orders" && (
+            <OrdersView
+              orders={filteredOrders}
+              allOrders={orders}
+              filter={orderFilter}
+              setFilter={setOrderFilter}
+              search={search}
+              setSearch={setSearch}
+              onStatusChange={handleOrderStatusChange}
+              onSelectInvoice={setSelectedInvoice}
+              onExport={() =>
+                exportCsv(
+                  "otpb-orders",
+                  orders.map((o) => ({
+                    order_id: o.id,
+                    date: formatDate(o.createdAt),
+                    customer_name: o.customer.name,
+                    phone: o.customer.phone,
+                    district: o.customer.district,
+                    address: o.customer.address || "",
+                    total_amount_bdt: o.totalPrice,
+                    status: o.status,
+                    items_count: o.items.reduce((acc, i) => acc + i.qty, 0),
+                  }))
+                )
+              }
+            />
+          )}
+
+          {/* TAB 3: INVENTORY & STOCK ERP */}
+          {tab === "inventory" && (
+            <InventoryView
+              inventory={inventory}
+              onSaveStock={handleSaveStock}
+              onExport={() =>
+                exportCsv(
+                  "otpb-inventory",
+                  PRODUCTS.map((p) => {
+                    const inv = inventory.find((i) => i.slug === p.slug);
+                    return {
+                      slug: p.slug,
+                      product_name: p.name,
+                      category: p.category,
+                      price: p.price ?? "Pack variant",
+                      available_units: inv?.available ?? 0,
+                      low_stock_threshold: inv?.lowStockAt ?? 10,
+                      status: (inv?.available ?? 0) <= (inv?.lowStockAt ?? 10) ? "LOW" : "OK",
+                    };
+                  })
+                )
+              }
+            />
+          )}
+
+          {/* TAB 4: WHOLESALE B2B QUOTES */}
+          {tab === "quotes" && (
+            <QuotesView
+              enquiries={enquiries}
+              onStatusChange={handleEnquiryStatusChange}
+              onExport={() =>
+                exportCsv(
+                  "otpb-quotes",
+                  enquiries.map((e) => ({
+                    id: e.id,
+                    date: formatDate(e.createdAt),
+                    kind: e.kind,
+                    customer_name: e.data.name || "",
+                    phone: e.data.phone || "",
+                    email: e.data.email || "",
+                    business: e.data.business || "",
+                    district: e.data.district || "",
+                    products: e.data.products || e.data.message || "",
+                    quantity: e.data.quantity || "",
+                    status: e.status,
+                  }))
+                )
+              }
+            />
+          )}
+
+          {/* TAB 5: CUSTOMER CRM */}
+          {tab === "customers" && (
+            <CustomersView
+              customers={customerList}
+              subscribers={subscribers}
+              onExport={() =>
+                exportCsv(
+                  "otpb-customers",
+                  customerList.map((c) => ({
+                    customer_name: c.name,
+                    contact: c.contact,
+                    district: c.district,
+                    total_orders: c.orders,
+                    total_spend_bdt: c.spend,
+                  }))
+                )
+              }
+            />
+          )}
+
+          {/* TAB 6: CLOUDINARY MEDIA HUB */}
+          {tab === "media" && <MediaView />}
+        </main>
+      </div>
+
+      {/* Invoice / Courier Delivery Slip Modal */}
+      <InvoiceModal order={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+    </div>
+  );
+}
+
+/* ==============================================================================
+   1. OVERVIEW VIEW
+   ============================================================================== */
+function OverviewView({
+  orders,
+  revenue,
+  pendingOrders,
+  confirmedOrders,
+  shippedOrders,
+  totalStockUnits,
+  lowStockCount,
+  newQuotes,
+  setTab,
+  onSelectInvoice,
+}: {
+  orders: OrderRecord[];
+  revenue: number;
+  pendingOrders: OrderRecord[];
+  confirmedOrders: OrderRecord[];
+  shippedOrders: OrderRecord[];
+  totalStockUnits: number;
+  lowStockCount: number;
+  newQuotes: EnquiryRecord[];
+  setTab: (t: Tab) => void;
+  onSelectInvoice: (o: OrderRecord) => void;
+}) {
+  const avgOrder = orders.length > 0 ? revenue / Math.max(orders.length, 1) : 0;
+
+  return (
+    <>
+      <div className={styles.metricGrid}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Total Realised Revenue</span>
+            <div className={styles.metricIcon}>৳</div>
+          </div>
+          <p className={styles.metricVal}>{formatPrice(revenue)}</p>
+          <p className={styles.metricSub}>From confirmed & shipped orders</p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Average Order Value</span>
+            <div className={styles.metricIcon}>📈</div>
+          </div>
+          <p className={styles.metricVal}>{formatPrice(avgOrder)}</p>
+          <p className={styles.metricSub}>Across {orders.length} customer orders</p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Warehouse Units</span>
+            <div className={styles.metricIcon}>📦</div>
+          </div>
+          <p className={styles.metricVal}>{totalStockUnits.toLocaleString()} pcs</p>
+          <p className={styles.metricSub}>
+            {lowStockCount > 0 ? (
+              <span style={{ color: "#dc2626", fontWeight: 700 }}>
+                ⚠️ {lowStockCount} items need restocking
+              </span>
+            ) : (
+              "All inventory above thresholds"
+            )}
+          </p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Wholesale Leads</span>
+            <div className={styles.metricIcon}>💼</div>
+          </div>
+          <p className={styles.metricVal}>{newQuotes.length}</p>
+          <p className={styles.metricSub}>New quotes awaiting pricing response</p>
+        </div>
+      </div>
+
+      {/* Operational Action Queues */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 20, marginBottom: 26 }}>
+        <div className={styles.card} style={{ margin: 0 }}>
+          <div className={styles.cardHead}>
+            <div>
+              <h3 className={styles.cardTitle}>Live Fulfilment Pipeline</h3>
+              <p className={styles.cardSub}>Orders awaiting customer confirmation and delivery</p>
+            </div>
+            <button type="button" className={styles.pillBtn} onClick={() => setTab("orders")}>
+              View All Orders →
+            </button>
+          </div>
+
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>District</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.slice(0, 5).map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <strong>#{o.id?.slice(-7).toUpperCase()}</strong>
+                      <div style={{ fontSize: 11, color: "var(--ink-500)" }}>{formatDate(o.createdAt)}</div>
+                    </td>
+                    <td>
+                      <div>{o.customer.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink-500)" }}>{o.customer.phone}</div>
+                    </td>
+                    <td>{o.customer.district}</td>
+                    <td>
+                      <strong>{o.totalPrice ? formatPrice(o.totalPrice) : "On request"}</strong>
+                    </td>
+                    <td>
+                      <span className={`${styles.statusPill} ${styles["status" + (o.status[0].toUpperCase() + o.status.slice(1))]}`}>
+                        {o.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={styles.pillBtn}
+                        style={{ padding: "4px 8px", fontSize: 12 }}
+                        onClick={() => onSelectInvoice(o)}
+                      >
+                        Slip
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: "center", padding: 36, color: "var(--ink-500)" }}>
+                      No orders placed yet. Check out from the storefront to see live orders here.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Warehouse Low Stock Alerts */}
+        <div className={styles.card} style={{ margin: 0 }}>
+          <div className={styles.cardHead}>
+            <div>
+              <h3 className={styles.cardTitle}>Immediate Attention</h3>
+              <p className={styles.cardSub}>Pending orders & wholesale quote requests</p>
+            </div>
+          </div>
+          <div style={{ padding: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div
+                style={{
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  padding: 16,
+                  borderRadius: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <h4 style={{ margin: "0 0 2px", fontSize: 14, color: "#92400e" }}>
+                    {pendingOrders.length} Orders Pending Confirmation
+                  </h4>
+                  <p style={{ margin: 0, fontSize: 12, color: "#78350f" }}>
+                    Call customers to confirm delivery district and charges.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.pillBtn}
+                  style={{ background: "#ffffff", borderColor: "#fde68a" }}
+                  onClick={() => setTab("orders")}
+                >
+                  Review
+                </button>
+              </div>
+
+              <div
+                style={{
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  padding: 16,
+                  borderRadius: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <h4 style={{ margin: "0 0 2px", fontSize: 14, color: "#1e40af" }}>
+                    {newQuotes.length} Wholesale Quotes
+                  </h4>
+                  <p style={{ margin: 0, fontSize: 12, color: "#1e3a8a" }}>
+                    Caterers and sweet shops awaiting custom B2B pricing.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.pillBtn}
+                  style={{ background: "#ffffff", borderColor: "#bfdbfe" }}
+                  onClick={() => setTab("quotes")}
+                >
+                  Respond
+                </button>
+              </div>
+
+              {lowStockCount > 0 && (
+                <div
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    padding: 16,
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <h4 style={{ margin: "0 0 2px", fontSize: 14, color: "#991b1b" }}>
+                      {lowStockCount} Products Low on Stock
+                    </h4>
+                    <p style={{ margin: 0, fontSize: 12, color: "#7f1d1d" }}>
+                      Stock on hand is at or below minimum threshold.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.pillBtn}
+                    style={{ background: "#ffffff", borderColor: "#fecaca" }}
+                    onClick={() => setTab("inventory")}
+                  >
+                    Manage
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ==============================================================================
+   2. ORDERS & FULFILMENT VIEW
+   ============================================================================== */
+function OrdersView({
+  orders,
+  allOrders,
+  filter,
+  setFilter,
+  search,
+  setSearch,
+  onStatusChange,
+  onSelectInvoice,
+  onExport,
+}: {
+  orders: OrderRecord[];
+  allOrders: OrderRecord[];
+  filter: OrderFilter;
+  setFilter: (f: OrderFilter) => void;
+  search: string;
+  setSearch: (s: string) => void;
+  onStatusChange: (id: string, s: OrderRecord["status"]) => void;
+  onSelectInvoice: (o: OrderRecord) => void;
+  onExport: () => void;
+}) {
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <div>
+          <h3 className={styles.cardTitle}>Commercial Orders</h3>
+          <p className={styles.cardSub}>
+            Manage courier tracking, invoices, and payment confirmation.
+          </p>
+        </div>
+        <div className={styles.cardActions}>
+          <button type="button" className={styles.pillBtn} onClick={onExport} disabled={!allOrders.length}>
+            📥 Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.toolbar}>
+        <div className={styles.searchWrap}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            className={styles.searchInput}
+            placeholder="Search order ID, phone, customer..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className={styles.filterGroup}>
+          {(["all", "pending", "confirmed", "shipped", "cancelled"] as OrderFilter[]).map((st) => (
+            <button
+              key={st}
+              type="button"
+              className={`${styles.filterBtn} ${filter === st ? styles.activeFilterBtn : ""}`}
+              onClick={() => setFilter(st)}
+            >
+              {st === "all" ? `All (${allOrders.length})` : st[0].toUpperCase() + st.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Order ID & Date</th>
+              <th>Customer Information</th>
+              <th>Destination</th>
+              <th>Items & Pack Quantities</th>
+              <th>Total Amount</th>
+              <th>Fulfilment Status</th>
+              <th>Quick Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => {
+              const digitsOnly = o.customer.phone.replace(/\D/g, "");
+              const waLink = `https://wa.me/88${digitsOnly.startsWith("0") ? digitsOnly.slice(1) : digitsOnly}?text=${encodeURIComponent(
+                `Hello ${o.customer.name}, regarding your One Time Product BD order #${o.id?.slice(-7).toUpperCase()}...`
+              )}`;
+
+              return (
+                <tr key={o.id}>
+                  <td>
+                    <strong>#{o.id?.slice(-7).toUpperCase()}</strong>
+                    <div style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 2 }}>
+                      {formatDate(o.createdAt)}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{o.customer.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--ink-700)" }}>{o.customer.phone}</div>
+                    {o.customer.email && (
+                      <div style={{ fontSize: 11, color: "var(--ink-500)" }}>{o.customer.email}</div>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{o.customer.district}</div>
+                    <div style={{ fontSize: 12, color: "var(--ink-500)", maxWidth: 160 }}>
+                      {o.customer.address || "Standard delivery"}
+                    </div>
+                  </td>
+                  <td>
+                    <details>
+                      <summary style={{ cursor: "pointer", color: "var(--brand-700)", fontWeight: 600 }}>
+                        {o.items.reduce((sum, i) => sum + i.qty, 0)} pcs in {o.items.length} items
+                      </summary>
+                      <ul style={{ margin: "6px 0 0", paddingLeft: 16, fontSize: 12, color: "var(--ink-700)" }}>
+                        {o.items.map((item, idx) => (
+                          <li key={`${item.slug}-${idx}`}>
+                            {item.qty} × {item.name} {item.variantLabel ? `(${item.variantLabel})` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </td>
+                  <td>
+                    <strong style={{ fontSize: 15 }}>
+                      {o.totalPrice ? formatPrice(o.totalPrice) : "On request"}
+                    </strong>
+                  </td>
+                  <td>
+                    <select
+                      value={o.status}
+                      onChange={(e) => o.id && onStatusChange(o.id, e.target.value as OrderRecord["status"])}
+                      style={{
+                        padding: "5px 8px",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        border: "1px solid var(--line-300)",
+                        background: "#fff",
+                      }}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        type="button"
+                        className={styles.pillBtn}
+                        style={{ padding: "4px 8px", fontSize: 12 }}
+                        onClick={() => onSelectInvoice(o)}
+                        title="Print courier slip"
+                      >
+                        🖨️ Slip
+                      </button>
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.pillBtn}
+                        style={{ padding: "4px 8px", fontSize: 12, color: "#166534" }}
+                        title="Chat on WhatsApp"
+                      >
+                        💬 WhatsApp
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {orders.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center", padding: 48, color: "var(--ink-500)" }}>
+                  No matching orders found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ==============================================================================
+   3. INVENTORY & WAREHOUSE ERP
+   ============================================================================== */
+function InventoryView({
+  inventory,
+  onSaveStock,
+  onExport,
+}: {
+  inventory: InventoryRecord[];
+  onSaveStock: (slug: string, available: number, lowStockAt: number, imageUrl?: string) => Promise<void>;
+  onExport: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [uploadingSlug, setUploadingSlug] = useState<string | null>(null);
+
+  const filtered = PRODUCTS.filter(
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function handleFileUpload(slug: string, file: File) {
+    setUploadingSlug(slug);
+    try {
+      const result = await uploadClientImage(file);
+      const inv = inventory.find((i) => i.slug === slug);
+      const available = inv?.available ?? 0;
+      const lowStockAt = inv?.lowStockAt ?? 10;
+      await onSaveStock(slug, available, lowStockAt, result.secureUrl);
+    } catch (err) {
+      alert("Failed to upload image to Cloudinary: " + (err as Error).message);
+    } finally {
+      setUploadingSlug(null);
+    }
+  }
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <div>
+          <h3 className={styles.cardTitle}>Warehouse Stock & Packaging Control</h3>
+          <p className={styles.cardSub}>
+            Live inventory counts in Firestore, stock threshold alerts, and Cloudinary product photos.
+          </p>
+        </div>
+        <div className={styles.cardActions}>
+          <button type="button" className={styles.pillBtn} onClick={onExport}>
+            📥 Export Stock CSV
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.toolbar}>
+        <div className={styles.searchWrap}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            className={styles.searchInput}
+            placeholder="Search by product name or category..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span style={{ fontSize: 13, color: "var(--ink-500)" }}>
+          Showing {filtered.length} products
+        </span>
+      </div>
+
+      <div className={styles.productGrid}>
+        {filtered.map((p) => {
+          const inv = inventory.find((i) => i.slug === p.slug);
+          const currentImg = inv?.imageUrl || p.image;
+          const available = inv?.available ?? 0;
+          const lowStockAt = inv?.lowStockAt ?? 10;
+          const isLow = available <= lowStockAt;
+
+          return (
+            <ProductInventoryCard
+              key={p.slug}
+              product={p}
+              inventoryRecord={inv}
+              currentImg={currentImg}
+              isLow={isLow}
+              isUploading={uploadingSlug === p.slug}
+              onSave={(avail, low) => onSaveStock(p.slug, avail, low, currentImg)}
+              onPickPhoto={() => fileInputs.current[p.slug]?.click()}
+              fileInputRef={(el) => {
+                fileInputs.current[p.slug] = el;
+              }}
+              onFileChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(p.slug, file);
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ProductInventoryCard({
+  product,
+  inventoryRecord,
+  currentImg,
+  isLow,
+  isUploading,
+  onSave,
+  onPickPhoto,
+  fileInputRef,
+  onFileChange,
+}: {
+  product: (typeof PRODUCTS)[0];
+  inventoryRecord?: InventoryRecord;
+  currentImg?: string;
+  isLow: boolean;
+  isUploading: boolean;
+  onSave: (avail: number, low: number) => void;
+  onPickPhoto: () => void;
+  fileInputRef: (el: HTMLInputElement | null) => void;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const [available, setAvailable] = useState(inventoryRecord?.available ?? 0);
+  const [threshold, setThreshold] = useState(inventoryRecord?.lowStockAt ?? 10);
+
+  useEffect(() => {
+    setAvailable(inventoryRecord?.available ?? 0);
+    setThreshold(inventoryRecord?.lowStockAt ?? 10);
+  }, [inventoryRecord]);
+
+  return (
+    <article className={styles.productCard}>
+      <div className={styles.productMediaRow}>
+        <div className={styles.productThumb}>
+          {currentImg ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={currentImg} alt={product.name} />
+          ) : (
+            <span style={{ fontSize: 24 }}>📦</span>
+          )}
+          <div className={styles.uploadPhotoTrigger} onClick={onPickPhoto}>
+            {isUploading ? "Uploading…" : "📸 Change"}
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            ref={fileInputRef}
+            onChange={onFileChange}
+          />
+        </div>
+
+        <div className={styles.productMeta}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand-700)", textTransform: "uppercase" }}>
+            {product.category.replace("-", " ")}
+          </span>
+          <h4 className={styles.productTitle} title={product.name}>
+            {product.name}
+          </h4>
+          <p className={styles.productPrice}>{priceLabel(product)}</p>
+        </div>
+      </div>
+
+      <div className={styles.stockControlBox}>
+        <div className={styles.stockNumbers}>
+          <div className={styles.stockFieldGroup}>
+            <span className={styles.stockFieldLabel}>In Stock</span>
+            <input
+              type="number"
+              min="0"
+              className={styles.stockInput}
+              value={available}
+              onChange={(e) => setAvailable(Math.max(0, Number(e.target.value)))}
+            />
+          </div>
+
+          <div className={styles.stockFieldGroup}>
+            <span className={styles.stockFieldLabel}>Alert At</span>
+            <input
+              type="number"
+              min="0"
+              className={styles.stockInput}
+              value={threshold}
+              onChange={(e) => setThreshold(Math.max(0, Number(e.target.value)))}
+            />
+          </div>
+
+          <div className={styles.quickAdjust}>
+            <button
+              type="button"
+              className={styles.adjustBtn}
+              onClick={() => setAvailable((v) => v + 10)}
+            >
+              +10
+            </button>
+            <button
+              type="button"
+              className={styles.adjustBtn}
+              onClick={() => setAvailable((v) => Math.max(0, v - 10))}
+            >
+              -10
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+          <span className={`${styles.statusPill} ${isLow ? styles.statusCancelled : styles.statusShipped}`}>
+            {isLow ? "⚠️ Low Stock" : "✓ Ample Stock"}
+          </span>
+          <button
+            type="button"
+            className={`${styles.pillBtn} ${styles.primaryPill}`}
+            style={{ padding: "4px 10px", fontSize: 12 }}
+            onClick={() => onSave(available, threshold)}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* ==============================================================================
+   4. B2B WHOLESALE QUOTES VIEW
+   ============================================================================== */
+function QuotesView({
+  enquiries,
+  onStatusChange,
+  onExport,
+}: {
+  enquiries: EnquiryRecord[];
+  onStatusChange: (id: string, s: EnquiryRecord["status"]) => void;
+  onExport: () => void;
+}) {
+  const [filter, setFilter] = useState<string>("all");
+
+  const filtered = enquiries.filter((e) => (filter === "all" ? true : e.status === filter));
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <div>
+          <h3 className={styles.cardTitle}>B2B Wholesale & Custom Quote Requests</h3>
+          <p className={styles.cardSub}>
+            Direct inquiries from sweet shops, bakeries, and catering businesses across Bangladesh.
+          </p>
+        </div>
+        <div className={styles.cardActions}>
+          <button type="button" className={styles.pillBtn} onClick={onExport} disabled={!enquiries.length}>
+            📥 Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.toolbar}>
+        <div className={styles.filterGroup}>
+          {["all", "new", "in_progress", "completed", "archived"].map((st) => (
+            <button
+              key={st}
+              type="button"
+              className={`${styles.filterBtn} ${filter === st ? styles.activeFilterBtn : ""}`}
+              onClick={() => setFilter(st)}
+            >
+              {st === "all" ? `All (${enquiries.length})` : st.replace("_", " ").toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Date & Type</th>
+              <th>Customer & Company</th>
+              <th>Contact Details</th>
+              <th>Requested Products & Quantity</th>
+              <th>District</th>
+              <th>Status</th>
+              <th>Direct Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((e) => {
+              const phone = e.data.phone || "";
+              const digits = phone.replace(/\D/g, "");
+              const wa = `https://wa.me/88${digits.startsWith("0") ? digits.slice(1) : digits}?text=${encodeURIComponent(
+                `Hello ${e.data.name || ""}, regarding your One Time Product BD quote request for ${e.data.products || "packaging"}...`
+              )}`;
+
+              return (
+                <tr key={e.id}>
+                  <td>
+                    <span className={`${styles.statusPill} ${e.kind === "quote" ? styles.statusNew : styles.statusConfirmed}`}>
+                      {e.kind === "quote" ? "Wholesale Quote" : "Contact Msg"}
+                    </span>
+                    <div style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 4 }}>
+                      {formatDate(e.createdAt)}
+                    </div>
+                  </td>
+                  <td>
+                    <strong>{e.data.name || "Unnamed"}</strong>
+                    {e.data.business && (
+                      <div style={{ fontSize: 12, color: "var(--brand-700)" }}>🏢 {e.data.business}</div>
+                    )}
+                  </td>
+                  <td>
+                    <div>{phone || "—"}</div>
+                    {e.data.email && <div style={{ fontSize: 12, color: "var(--ink-500)" }}>{e.data.email}</div>}
+                  </td>
+                  <td style={{ maxWidth: 280 }}>
+                    <div style={{ fontWeight: 600 }}>{e.data.products || e.data.message || "—"}</div>
+                    {e.data.quantity && (
+                      <div style={{ fontSize: 12, color: "var(--ink-700)" }}>
+                        Quantity: <strong>{e.data.quantity}</strong>
+                      </div>
+                    )}
+                    {e.data.notes && (
+                      <div style={{ fontSize: 11, color: "var(--ink-500)", fontStyle: "italic", marginTop: 2 }}>
+                        &quot;{e.data.notes}&quot;
+                      </div>
+                    )}
+                  </td>
+                  <td>{e.data.district || "—"}</td>
+                  <td>
+                    <select
+                      value={e.status}
+                      onChange={(evt) => e.id && onStatusChange(e.id, evt.target.value as EnquiryRecord["status"])}
+                      style={{
+                        padding: "5px 8px",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        border: "1px solid var(--line-300)",
+                        background: "#fff",
+                      }}
+                    >
+                      <option value="new">New</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </td>
+                  <td>
+                    {phone && (
+                      <a
+                        href={wa}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.pillBtn}
+                        style={{ color: "#166534", padding: "4px 8px", fontSize: 12 }}
+                      >
+                        💬 Reply on WhatsApp
+                      </a>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center", padding: 48, color: "var(--ink-500)" }}>
+                  No quote inquiries in this view.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ==============================================================================
+   5. CUSTOMERS & CRM VIEW
+   ============================================================================== */
+function CustomersView({
+  customers,
+  subscribers,
+  onExport,
+}: {
+  customers: { name: string; contact: string; district: string; orders: number; spend: number }[];
+  subscribers: NewsletterSubscription[];
+  onExport: () => void;
+}) {
+  return (
+    <>
+      <div className={styles.metricGrid} style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Total Commercial Clients</span>
+            <div className={styles.metricIcon}>👥</div>
+          </div>
+          <p className={styles.metricVal}>{customers.length}</p>
+          <p className={styles.metricSub}>Active accounts who ordered packaging</p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Repeat Order Customers</span>
+            <div className={styles.metricIcon}>🔁</div>
+          </div>
+          <p className={styles.metricVal}>{customers.filter((c) => c.orders > 1).length}</p>
+          <p className={styles.metricSub}>Placed multiple recurring orders</p>
+        </div>
+
+        <div className={styles.metricCard}>
+          <div className={styles.metricTop}>
+            <span className={styles.metricLabel}>Newsletter Subscribers</span>
+            <div className={styles.metricIcon}>📬</div>
+          </div>
+          <p className={styles.metricVal}>{subscribers.length}</p>
+          <p className={styles.metricSub}>Subscribed via footer</p>
+        </div>
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.cardHead}>
+          <div>
+            <h3 className={styles.cardTitle}>Customer Accounts & Spend LTV</h3>
+            <p className={styles.cardSub}>Track top buyers, geographic reach, and recurring volume.</p>
+          </div>
+          <div className={styles.cardActions}>
+            <button type="button" className={styles.pillBtn} onClick={onExport} disabled={!customers.length}>
+              📥 Export Customer Directory
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Phone / Email</th>
+                <th>Primary Location</th>
+                <th>Orders Count</th>
+                <th>Lifetime Spend (BDT)</th>
+                <th>Client Tier</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.map((c) => (
+                <tr key={c.contact}>
+                  <td>
+                    <strong>{c.name}</strong>
+                  </td>
+                  <td>{c.contact}</td>
+                  <td>{c.district}</td>
+                  <td>
+                    <span className={styles.navBadge} style={{ background: "#e2e8f0", color: "#1e293b" }}>
+                      {c.orders} orders
+                    </span>
+                  </td>
+                  <td>
+                    <strong>{formatPrice(c.spend)}</strong>
+                  </td>
+                  <td>
+                    {c.spend > 5000 ? (
+                      <span className={`${styles.statusPill} ${styles.statusShipped}`}>VIP Client</span>
+                    ) : c.orders > 1 ? (
+                      <span className={`${styles.statusPill} ${styles.statusConfirmed}`}>Repeat Buyer</span>
+                    ) : (
+                      <span className={`${styles.statusPill} ${styles.statusNew}`}>New Buyer</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {customers.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: 48, color: "var(--ink-500)" }}>
+                    No customer accounts yet. Orders placed will automatically generate customer CRM records.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ==============================================================================
+   6. CLOUDINARY MEDIA HUB VIEW
+   ============================================================================== */
+function MediaView() {
+  const [uploads, setUploads] = useState<{ url: string; publicId: string; name: string }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  async function handleDirectUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const res = await uploadClientImage(file);
+      setUploads((prev) => [{ url: res.secureUrl, publicId: res.publicId, name: file.name }, ...prev]);
+    } catch (err) {
+      alert("Failed to upload: " + (err as Error).message);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  function copyToClipboard(url: string) {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  }
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <div>
+          <h3 className={styles.cardTitle}>Cloudinary Direct Media Asset Storage</h3>
+          <p className={styles.cardSub}>
+            Upload packaging photography, warehouse banners, and product shots directly to your Cloudinary cloud.
+          </p>
+        </div>
+        <div>
+          <label className={`${styles.pillBtn} ${styles.primaryPill}`} style={{ cursor: "pointer" }}>
+            {isUploading ? "Uploading to Cloudinary…" : "☁️ Upload New Asset"}
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleDirectUpload}
+              disabled={isUploading}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div style={{ padding: 28 }}>
+        {uploads.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px", border: "2px dashed var(--line-300)", borderRadius: 16 }}>
+            <span style={{ fontSize: 42 }}>☁️</span>
+            <h4 style={{ margin: "14px 0 6px", fontSize: 16 }}>No recent session uploads</h4>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-500)", maxWidth: 440, marginInline: "auto" }}>
+              Click &quot;Upload New Asset&quot; to push packaging photographs or banners directly to Cloudinary folder <code style={{ background: "#eee", padding: "2px 6px", borderRadius: 4 }}>one-time-product-bd</code>.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
+            {uploads.map((u) => (
+              <div
+                key={u.publicId}
+                style={{
+                  border: "1px solid var(--line-200)",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  background: "#ffffff",
+                }}
+              >
+                <div style={{ height: 160, background: "#f8faf8", overflow: "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u.url} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div style={{ padding: 12 }}>
+                  <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {u.name}
+                  </p>
+                  <p style={{ margin: "0 0 10px", fontSize: 11, color: "var(--ink-500)", wordBreak: "break-all" }}>
+                    {u.publicId}
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.pillBtn}
+                    style={{ width: "100%", justifyContent: "center", fontSize: 12 }}
+                    onClick={() => copyToClipboard(u.url)}
+                  >
+                    {copiedUrl === u.url ? "✓ Copied URL!" : "Copy URL"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
