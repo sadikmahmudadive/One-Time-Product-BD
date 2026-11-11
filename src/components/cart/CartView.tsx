@@ -99,10 +99,17 @@ export function CartView() {
               {unpricedCount} {unpricedCount === 1 ? "item has" : "items have"} no listed price. We’ll confirm {unpricedCount === 1 ? "it" : "them"} when you send the enquiry.
             </p>
           )}
-          <Link href="/quote?from=cart" className="btn btn-primary btn-block">
-            Send as order enquiry
-          </Link>
-          <p className={styles.hint}>Online checkout isn’t available yet. Send your cart as an enquiry and we’ll confirm prices and delivery.</p>
+          {unpricedCount > 0 ? (
+            <>
+              <Link href="/quote?from=cart" className="btn btn-primary btn-block">Request a price confirmation</Link>
+              <p className={styles.hint}>We need to confirm the unlisted prices before this order can be checked out.</p>
+            </>
+          ) : (
+            <>
+              <Link href="/checkout" className="btn btn-primary btn-block">Proceed to checkout</Link>
+              <p className={styles.hint}>Delivery cost and payment instructions are confirmed after you place the order request.</p>
+            </>
+          )}
         </aside>
       </div>
     </div>

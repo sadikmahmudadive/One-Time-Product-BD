@@ -7,6 +7,9 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  updateDoc,
+  setDoc,
   serverTimestamp,
   type DocumentData,
 } from "firebase/firestore";
@@ -61,10 +64,38 @@ export async function getEnquiriesFromFirestore(
   }));
 }
 
+/** Update the workflow state of a quote or contact request. */
+export async function updateEnquiryStatus(id: string, status: EnquiryRecord["status"]): Promise<void> {
+  await updateDoc(doc(requireDb(), "enquiries", id), { status });
+}
+
 export interface NewsletterSubscription {
   id?: string;
   email: string;
   createdAt?: unknown;
+}
+
+/** Fetch recent newsletter subscribers for the marketing workspace. */
+export async function getNewsletterSubscriptions(max = 250): Promise<NewsletterSubscription[]> {
+  const snapshot = await getDocs(query(collection(requireDb(), "subscribers"), orderBy("createdAt", "desc"), limit(max)));
+  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NewsletterSubscription, "id">) }));
+}
+
+export interface InventoryRecord {
+  slug: string;
+  available: number;
+  lowStockAt: number;
+  updatedAt?: unknown;
+}
+
+/** Inventory levels are kept separately from catalogue copy and prices. */
+export async function getInventoryFromFirestore(): Promise<InventoryRecord[]> {
+  const snapshot = await getDocs(collection(requireDb(), "inventory"));
+  return snapshot.docs.map((d) => ({ slug: d.id, ...(d.data() as Omit<InventoryRecord, "slug">) }));
+}
+
+export async function saveInventoryToFirestore(slug: string, available: number, lowStockAt: number): Promise<void> {
+  await setDoc(doc(requireDb(), "inventory", slug), { available, lowStockAt, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 /** Save email subscriber to Firestore */
@@ -118,5 +149,17 @@ export async function getOrderFromFirestore(orderId: string): Promise<OrderRecor
   const docSnap = await getDoc(doc(database, "orders", orderId));
   if (!docSnap.exists()) return null;
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrderRecord, "id">) };
+}
+
+/** Fetch the most recent orders for the operations dashboard. */
+export async function getOrdersFromFirestore(max = 100): Promise<OrderRecord[]> {
+  const database = requireDb();
+  const snapshot = await getDocs(query(collection(database, "orders"), orderBy("createdAt", "desc"), limit(max)));
+  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderRecord, "id">) }));
+}
+
+/** Advance an order through the fulfilment workflow. */
+export async function updateOrderStatus(id: string, status: OrderRecord["status"]): Promise<void> {
+  await updateDoc(doc(requireDb(), "orders", id), { status });
 }
 
