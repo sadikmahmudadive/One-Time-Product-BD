@@ -1,13 +1,22 @@
+import { isFirebaseConfigured } from "./firebase/config";
+import { saveEnquiryToFirestore } from "./firebase/firestore";
+
 export type EnquiryKind = "quote" | "contact";
 
 /**
- * The one place enquiry forms send their data.
- *
- * TODO: there is no backend yet. This resolves after a short delay so the forms behave
- * end to end, but NOTHING IS TRANSMITTED. Before launch, replace the body with a real call
- * (a Route Handler that emails or forwards to WhatsApp / a CRM) and let it reject on failure —
- * the forms already show an error state when this throws.
+ * Handles submission of quotes and contact inquiries.
+ * If Firebase is configured, records the submission into Cloud Firestore.
+ * If Firebase is not yet configured, gracefully simulates the submission after a short delay.
  */
-export async function submitEnquiry(_kind: EnquiryKind, _data: Record<string, string>): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 600));
+export async function submitEnquiry(kind: EnquiryKind, data: Record<string, string>): Promise<void> {
+  if (isFirebaseConfigured) {
+    await saveEnquiryToFirestore(kind, data);
+  } else {
+    // Development / demo fallback until .env.local has live Firebase credentials
+    console.info(
+      `[Firestore Demo] Firebase not configured in .env.local. Simulated enquiry submission (${kind}):`,
+      data
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
 }
