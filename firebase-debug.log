@@ -1,0 +1,108 @@
+[debug] [2026-11-12T18:57:08.619Z] ----------------------------------------------------------------------
+[debug] [2026-11-12T18:57:08.622Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js projects:list
+[debug] [2026-11-12T18:57:08.622Z] CLI Version:   15.36.0
+[debug] [2026-11-12T18:57:08.622Z] Platform:      win32
+[debug] [2026-11-12T18:57:08.622Z] Node Version:  v25.6.0
+[debug] [2026-11-12T18:57:08.622Z] Detected Agent: antigravity
+[debug] [2026-11-12T18:57:08.622Z] Time:          Fri Nov 13 2026 00:57:08 GMT+0600 (Bangladesh Standard Time)
+[debug] [2026-11-12T18:57:08.622Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-11-12T18:57:08.762Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-11-12T18:57:08.762Z] > authorizing via signed-in user (vertexhand@gmail.com)
+[debug] [2026-11-12T18:57:08.772Z] Checked if tokens are valid: false, expires at: 1794505835638
+[debug] [2026-11-12T18:57:08.772Z] Checked if tokens are valid: false, expires at: 1794505835638
+[debug] [2026-11-12T18:57:08.772Z] > refreshing access token with scopes: []
+[debug] [2026-11-12T18:57:08.774Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-11-12T18:57:08.775Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-11-12T18:57:09.705Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-11-12T18:57:09.706Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-11-12T18:57:09.716Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-11-12T18:57:11.250Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-11-12T18:57:11.250Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] ┌──────────────────────┬──────────────────────┬────────────────┬──────────────────────┐
+│ Project Display Name │ Project ID           │ Project Number │ Resource Location ID │
+├──────────────────────┼──────────────────────┼────────────────┼──────────────────────┤
+│ lifestyle            │ lifestyle-605a7      │ 706970647430   │ [Not specified]      │
+├──────────────────────┼──────────────────────┼────────────────┼──────────────────────┤
+│ Roktora              │ roktora              │ 171688562337   │ [Not specified]      │
+├──────────────────────┼──────────────────────┼────────────────┼──────────────────────┤
+│ Ruqyah Healing       │ ruqyah-healing-f1b46 │ 968913433241   │ [Not specified]      │
+├──────────────────────┼──────────────────────┼────────────────┼──────────────────────┤
+│ SalesPilot AI        │ salespilot-ai-9b1cd  │ 687369627867   │ [Not specified]      │
+├──────────────────────┼──────────────────────┼────────────────┼──────────────────────┤
+│ Vertexhand Demo      │ vertexhand-demo      │ 545830925830   │ [Not specified]      │
+└──────────────────────┴──────────────────────┴────────────────┴──────────────────────┘
+[info] 
+[info] 5 project(s) total.
+[debug] [2026-11-12T18:59:43.815Z] ----------------------------------------------------------------------
+[debug] [2026-11-12T18:59:43.818Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore:rules --project onetime-product
+[debug] [2026-11-12T18:59:43.818Z] CLI Version:   15.36.0
+[debug] [2026-11-12T18:59:43.818Z] Platform:      win32
+[debug] [2026-11-12T18:59:43.818Z] Node Version:  v25.6.0
+[debug] [2026-11-12T18:59:43.818Z] Detected Agent: antigravity
+[debug] [2026-11-12T18:59:43.818Z] Time:          Fri Nov 13 2026 00:59:43 GMT+0600 (Bangladesh Standard Time)
+[debug] [2026-11-12T18:59:43.818Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-11-12T18:59:46.153Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-11-12T18:59:46.153Z] > authorizing via signed-in user (vertexhand@gmail.com)
+[debug] [2026-11-12T18:59:46.153Z] [iam] checking project onetime-product for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-11-12T18:59:46.163Z] Checked if tokens are valid: true, expires at: 1794513428706
+[debug] [2026-11-12T18:59:46.164Z] Checked if tokens are valid: true, expires at: 1794513428706
+[debug] [2026-11-12T18:59:46.165Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/onetime-product:testIamPermissions [none]
+[debug] [2026-11-12T18:59:46.165Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/onetime-product:testIamPermissions  x-goog-user-project=onetime-product
+[debug] [2026-11-12T18:59:46.165Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/onetime-product:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-11-12T18:59:49.190Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/onetime-product:testIamPermissions 403
+[debug] [2026-11-12T18:59:49.191Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/onetime-product:testIamPermissions {"error":{"code":403,"message":"Caller does not have required permission to use project onetime-product. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=onetime-product and then retry. Propagation of the new permission may take a few minutes.","status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"USER_PROJECT_DENIED","domain":"googleapis.com","metadata":{"consoleUrl":"https://console.developers.google.com/iam-admin/iam?project=onetime-product","containerInfo":"onetime-product","service":"cloudresourcemanager.googleapis.com","consumer":"projects/onetime-product"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"Caller does not have required permission to use project onetime-product. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=onetime-product and then retry. Propagation of the new permission may take a few minutes."},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Google developer console IAM admin","url":"https://console.developers.google.com/iam-admin/iam?project=onetime-product"}]}]}}
+[debug] [2026-11-12T18:59:49.192Z] [iam] error while checking permissions, command may fail: Request to https://cloudresourcemanager.googleapis.com/v1/projects/onetime-product:testIamPermissions had HTTP Error: 403, Caller does not have required permission to use project onetime-product. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=onetime-product and then retry. Propagation of the new permission may take a few minutes.
+[info] 
+[info] === Deploying to 'onetime-product'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-11-12T18:59:49.195Z] Checked if tokens are valid: true, expires at: 1794513428706
+[debug] [2026-11-12T18:59:49.195Z] Checked if tokens are valid: true, expires at: 1794513428706
+[debug] [2026-11-12T18:59:49.195Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/onetime-product/services/firestore.googleapis.com [none]
+[debug] [2026-11-12T18:59:49.195Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/onetime-product/services/firestore.googleapis.com  x-goog-user-project=onetime-product
+[debug] [2026-11-12T18:59:51.203Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/onetime-product/services/firestore.googleapis.com 403
+[debug] [2026-11-12T18:59:51.203Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/onetime-product/services/firestore.googleapis.com [omitted]
+[error] 
+[error] Error: Request to https://serviceusage.googleapis.com/v1/projects/onetime-product/services/firestore.googleapis.com had HTTP Error: 403, Caller does not have required permission to use project onetime-product. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=onetime-product and then retry. Propagation of the new permission may take a few minutes.
+[debug] [2026-11-12T18:59:51.662Z] Error Context: {
+  "body": {
+    "error": {
+      "code": 403,
+      "message": "Caller does not have required permission to use project onetime-product. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=onetime-product and then retry. Propagation of the new permission may take a few minutes.",
+      "status": "PERMISSION_DENIED",
+      "details": [
+        {
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          "reason": "USER_PROJECT_DENIED",
+          "domain": "googleapis.com",
+          "metadata": {
+            "containerInfo": "onetime-product",
+            "consumer": "projects/onetime-product",
+            "service": "serviceusage.googleapis.com",
+            "consoleUrl": "https://console.developers.google.com/iam-admin/iam?project=onetime-product"
+          }
+        },
+        {
+          "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+          "locale": "en-US",
+          "message": "Caller does not have required permission to use project onetime-product. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=onetime-product and then retry. Propagation of the new permission may take a few minutes."
+        },
+        {
+          "@type": "type.googleapis.com/google.rpc.Help",
+          "links": [
+            {
+              "description": "Google developer console IAM admin",
+              "url": "https://console.developers.google.com/iam-admin/iam?project=onetime-product"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "statusCode": 403
+  }
+}

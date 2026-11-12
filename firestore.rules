@@ -34,7 +34,7 @@ service cloud.firestore {
       allow create: if true;
       // Admins can read, update status, and manage all orders
       // Authenticated customers can read their own orders
-      allow read, update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow read, update, delete: if isAdmin() || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
     }
 
     // Enquiries / Quotes Collection

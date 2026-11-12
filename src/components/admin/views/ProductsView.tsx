@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CATEGORIES, priceLabel, lowestPrice, type CategoryId, type Product, type Variant } from "@/lib/catalog";
 import type { ShapeKind } from "@/lib/content";
 import { buildCloudinaryUrl, uploadClientImage } from "@/lib/cloudinary/client";
 import { ProductShape } from "@/components/ui/ProductShape";
+import { ProductCard } from "@/components/commerce/ProductCard";
 import { formatPrice } from "@/lib/format";
 import { EmptyState, Icon, PageHeader, Panel, SearchField, Segmented, StatCard } from "../ui";
 import styles from "../admin.module.css";
@@ -31,9 +32,13 @@ export function ProductsView({
 }: ProductsViewProps) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [activeEditor, setActiveEditor] = useState<"new" | Product | null>(null);
   const [seeding, setSeeding] = useState(false);
+
+  // Scroll to top whenever entering or exiting the full-screen editor
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeEditor]);
 
   const q = search.trim().toLowerCase();
   const visible = useMemo(() => {
@@ -58,7 +63,7 @@ export function ProductsView({
       setSeeding(true);
       await onSeed();
     } catch {
-      // onSeed in AdminDashboard already notifies with exact error
+      // onSeed in AdminDashboard notifies with exact error
     } finally {
       setSeeding(false);
     }
@@ -72,6 +77,21 @@ export function ProductsView({
     } catch {
       notify("error", `Failed to delete product "${name}".`);
     }
+  }
+
+  // If editor is launched, render the Full-Screen Editor Workspace
+  if (activeEditor !== null) {
+    return (
+      <ProductEditorPage
+        product={activeEditor === "new" ? null : activeEditor}
+        onBack={() => setActiveEditor(null)}
+        onSave={async (saved) => {
+          await onSave(saved);
+          setActiveEditor(null);
+        }}
+        notify={notify}
+      />
+    );
   }
 
   return (
@@ -97,7 +117,7 @@ export function ProductsView({
             <button
               type="button"
               className={`${styles.btn} ${styles.btnPrimary}`}
-              onClick={() => setIsCreating(true)}
+              onClick={() => setActiveEditor("new")}
             >
               + Add Product
             </button>
@@ -271,7 +291,7 @@ export function ProductsView({
                           <button
                             type="button"
                             className={styles.btnSm}
-                            onClick={() => setEditingProduct(p)}
+                            onClick={() => setActiveEditor(p)}
                           >
                             Edit
                           </button>
@@ -301,39 +321,22 @@ export function ProductsView({
           </div>
         )}
       </Panel>
-
-      {(isCreating || editingProduct) && (
-        <ProductDrawer
-          product={editingProduct}
-          onClose={() => {
-            setIsCreating(false);
-            setEditingProduct(null);
-          }}
-          onSave={async (saved) => {
-            await onSave(saved);
-            setIsCreating(false);
-            setEditingProduct(null);
-            notify("success", `Product "${saved.name}" saved to Firestore.`);
-          }}
-          notify={notify}
-        />
-      )}
     </div>
   );
 }
 
 /* ==============================================================================
-   PRODUCT DRAWER / MODAL
+   FULL-SCREEN PRODUCT EDITOR PAGE
    ============================================================================== */
 
-interface ProductDrawerProps {
+interface ProductEditorPageProps {
   product: Product | null;
-  onClose: () => void;
+  onBack: () => void;
   onSave: (product: Product) => Promise<void>;
   notify: (tone: "success" | "error", text: string) => void;
 }
 
-function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps) {
+function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPageProps) {
   const isEdit = Boolean(product);
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
@@ -350,6 +353,14 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
       { id: "pack-500", pieces: "500", price: 6500 },
     ]
   );
+  const [specs, setSpecs] = useState<[string, string][]>(
+    product?.specs || [
+      ["Material", "Crystal Acrylic"],
+      ["Food Grade", "Yes (FDA Compliant)"],
+      ["Pack sizes", "Retail & Wholesale cartons"],
+      ["Origin", "Made in Bangladesh"],
+    ]
+  );
   const [isNew, setIsNew] = useState(product?.tags?.includes("new") ?? true);
   const [isPopular, setIsPopular] = useState(product?.tags?.includes("popular") ?? false);
   const [available, setAvailable] = useState<number>(product?.available ?? 50);
@@ -359,7 +370,7 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
 
   function handleNameChange(val: string) {
     setName(val);
-    if (!isEdit && !slug) {
+    if (!isEdit) {
       setSlug(
         val
           .toLowerCase()
@@ -376,7 +387,7 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
       setUploadingImage(true);
       const res = await uploadClientImage(file);
       setImage(res.secureUrl);
-      notify("success", "Photo uploaded to Cloudinary.");
+      notify("success", "Photo uploaded directly to Cloudinary.");
     } catch (err) {
       notify("error", (err as Error).message || "Upload failed");
     } finally {
@@ -385,10 +396,10 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
   }
 
   function handleAddVariant() {
-    const nextPieces = "1000";
+    const pieces = "1000";
     setVariants((prev) => [
       ...prev,
-      { id: `${slug || "pack"}-${nextPieces}-${Date.now().toString(36)}`, pieces: nextPieces, price: null },
+      { id: `${slug || "pack"}-${pieces}-${Date.now().toString(36)}`, pieces, price: null },
     ]);
   }
 
@@ -409,10 +420,27 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
     setVariants((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleSpecChange(index: number, field: "label" | "value", val: string) {
+    setSpecs((prev) => {
+      const copy = [...prev] as [string, string][];
+      if (field === "label") copy[index] = [val, copy[index][1]];
+      else copy[index] = [copy[index][0], val];
+      return copy;
+    });
+  }
+
+  function handleAddSpec() {
+    setSpecs((prev) => [...prev, ["", ""]]);
+  }
+
+  function handleRemoveSpec(index: number) {
+    setSpecs((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      notify("error", "Please provide a product name.");
+      notify("error", "Please provide a product title.");
       return;
     }
     const cleanSlug = (slug || name)
@@ -423,6 +451,8 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
     const tags: ("new" | "popular")[] = [];
     if (isNew) tags.push("new");
     if (isPopular) tags.push("popular");
+
+    const validSpecs = specs.filter(([k, v]) => k.trim() !== "" || v.trim() !== "");
 
     const payload: Product = {
       slug: cleanSlug,
@@ -435,10 +465,7 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
       price: isVariantProduct ? null : singlePrice.trim() !== "" ? Number(singlePrice) : null,
       variants: isVariantProduct ? variants : undefined,
       tags,
-      specs: product?.specs || [
-        ["Material", "Food-grade polymer"],
-        ["Origin", "Made in Bangladesh"],
-      ],
+      specs: validSpecs,
       available,
       lowStockAt,
     };
@@ -453,128 +480,153 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
     }
   }
 
+  // Real-time calculated price string for preview
+  const previewPrice = useMemo(() => {
+    if (isVariantProduct) {
+      const prices = variants.map((v) => v.price).filter((p): p is number => p !== null);
+      if (!prices.length) return "Price on request";
+      return prices.length > 1
+        ? `${formatPrice(Math.min(...prices))} – ${formatPrice(Math.max(...prices))}`
+        : `From ${formatPrice(prices[0])}`;
+    }
+    return singlePrice.trim() !== "" ? formatPrice(Number(singlePrice)) : "Price on request";
+  }, [isVariantProduct, variants, singlePrice]);
+
   return (
-    <div className={styles.drawerRoot} role="dialog" aria-modal="true" aria-labelledby="product-drawer-title">
-      <button type="button" className={styles.navScrim} onClick={onClose} aria-label="Close drawer" />
-      <div className={styles.drawer} style={{ maxWidth: 540 }}>
-        <div className={styles.drawerHead}>
-          <h2 id="product-drawer-title" className={styles.drawerTitle}>
-            {isEdit ? `Edit "${product?.name}"` : "Add New Product"}
-          </h2>
-          <button type="button" className={styles.bannerClose} onClick={onClose} aria-label="Close">
-            <Icon name="close" size={16} />
+    <div className={styles.editorWorkspace}>
+      {/* Top Header */}
+      <header className={styles.editorHeader}>
+        <div className={styles.editorTitleGroup}>
+          <button type="button" className={styles.editorBackBtn} onClick={onBack}>
+            <Icon name="chevron" size={14} /> Back to Products
           </button>
+          <h1 className={styles.editorTitle}>
+            {isEdit ? `Edit Product: ${product?.name}` : "Create New Product"}
+          </h1>
+          <span
+            style={{
+              padding: "3px 10px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+              background: isEdit ? "#e0f2fe" : "#ecfdf5",
+              color: isEdit ? "#0369a1" : "#047857",
+            }}
+          >
+            {isEdit ? "Published Catalogue Item" : "New Item"}
+          </span>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className={styles.drawerBody} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Name & Slug */}
-            <div>
-              <label className="lbl">Product Name *</label>
-              <input
-                className="field"
-                type="text"
-                required
-                placeholder="e.g. 500 ml Crystal Clear Box"
-                value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
-              />
-            </div>
+        <div className={styles.editorHeaderActions}>
+          <button type="button" className={styles.btn} onClick={onBack} disabled={saving}>
+            Cancel
+          </button>
+          {isEdit && product && (
+            <Link
+              href={`/product/${product.slug}`}
+              target="_blank"
+              className={styles.btn}
+              title="Open storefront product page"
+            >
+              View on Store <Icon name="external" size={14} />
+            </Link>
+          )}
+          <button
+            type="submit"
+            form="product-editor-form"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            disabled={saving}
+          >
+            {saving ? "Saving to Firestore…" : isEdit ? "Save Changes" : "Publish Product"}
+          </button>
+        </div>
+      </header>
 
-            <div>
-              <label className="lbl">URL Slug *</label>
-              <input
-                className="field"
-                type="text"
-                required
-                disabled={isEdit}
-                placeholder="e.g. 500-ml-crystal-clear-box"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-              />
-              <span style={{ fontSize: 11, color: "var(--ink-500)" }}>
-                Storefront URL will be <code>/product/{slug || "slug"}</code>
-              </span>
-            </div>
+      {/* Main 2-Column Grid */}
+      <form id="product-editor-form" onSubmit={handleSubmit}>
+        <div className={styles.editorGrid}>
+          {/* Left Column (Primary Details) */}
+          <div className={styles.editorColMain}>
+            {/* 1. Title, Slug & Description */}
+            <Panel title="Product Information" description="Primary details visible across the storefront.">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <label className="lbl">Product Name / Title *</label>
+                  <input
+                    className="field"
+                    type="text"
+                    required
+                    placeholder="e.g. 500 ml Transparent Square Box"
+                    value={name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                  />
+                </div>
 
-            {/* Category & Shape */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label className="lbl">Category</label>
-                <select
-                  className="field"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as CategoryId)}
-                >
-                  <option value="square">Square & Rectangular</option>
-                  <option value="round">Round Containers</option>
-                  <option value="dessert-cups">Dessert Cups</option>
-                  <option value="crates">Crates & Bulk</option>
-                </select>
+                <div>
+                  <label className="lbl">URL Handle / Slug *</label>
+                  <input
+                    className="field"
+                    type="text"
+                    required
+                    disabled={isEdit}
+                    placeholder="e.g. 500-ml-transparent-square-box"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                  />
+                  <div style={{ marginTop: 6, fontSize: 12, color: "var(--ink-500)" }}>
+                    Storefront URL: <code style={{ background: "#f0f4f1", padding: "2px 6px", borderRadius: 4 }}>https://onetimeproductbd.com/product/{slug || "slug"}</code>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="lbl">Short Summary / Product Copy</label>
+                  <textarea
+                    className="field"
+                    rows={3}
+                    placeholder="Crisp one or two line description shown under the title and in search results…"
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                  />
+                </div>
               </div>
+            </Panel>
 
-              <div>
-                <label className="lbl">Isometric Shape</label>
-                <select
-                  className="field"
-                  value={kind}
-                  onChange={(e) => setKind(e.target.value as ShapeKind)}
-                >
-                  <option value="square">Square</option>
-                  <option value="round">Round</option>
-                  <option value="cup">Cup</option>
-                  <option value="heart">Heart</option>
-                  <option value="crate">Crate</option>
-                  <option value="rectClear">Rect Clear</option>
-                  <option value="rectBlack">Rect Black Base</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div>
-              <label className="lbl">Short Summary / Description</label>
-              <textarea
-                className="field"
-                rows={2}
-                placeholder="Brief description displayed on cards and product pages…"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-              />
-            </div>
-
-            {/* Media Upload */}
-            <div>
-              <label className="lbl">Product Photography (Cloudinary)</label>
-              <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 4 }}>
+            {/* 2. Cloudinary Media Asset */}
+            <Panel title="Media & Photography" description="High-resolution product photographs stored on Cloudinary.">
+              <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
                 <div
                   style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 10,
-                    background: "#f4f7f4",
-                    border: "1px dashed #cbd5cb",
+                    width: 140,
+                    height: 140,
+                    borderRadius: 12,
+                    background: "#f8faf8",
+                    border: "2px dashed #cbd5cb",
                     overflow: "hidden",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    flexShrink: 0,
+                    position: "relative",
                   }}
                 >
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={buildCloudinaryUrl(image, { width: 144, height: 144, crop: "fill" })}
-                      alt="Preview"
+                      src={buildCloudinaryUrl(image, { width: 280, height: 280, crop: "fill" })}
+                      alt="Uploaded preview"
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
-                    <span style={{ fontSize: 24 }}>📷</span>
+                    <div style={{ textAlign: "center", color: "var(--ink-400)", padding: 8 }}>
+                      <span style={{ fontSize: 32 }}>☁️</span>
+                      <p style={{ margin: "4px 0 0", fontSize: 11 }}>No photo yet</p>
+                    </div>
                   )}
                 </div>
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label className={`${styles.btnSm} ${styles.btnPrimary}`} style={{ cursor: "pointer", width: "fit-content" }}>
-                    {uploadingImage ? "Uploading to Cloudinary…" : "Upload Photo"}
+
+                <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <label className={`${styles.btn} ${styles.btnPrimary}`} style={{ cursor: "pointer", width: "fit-content" }}>
+                    <Icon name="upload" size={15} />
+                    {uploadingImage ? "Uploading to Cloudinary…" : "Upload Packaging Photo"}
                     <input
                       type="file"
                       accept="image/*"
@@ -583,139 +635,336 @@ function ProductDrawer({ product, onClose, onSave, notify }: ProductDrawerProps)
                       disabled={uploadingImage}
                     />
                   </label>
+
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-500)", lineHeight: 1.5 }}>
+                    Accepted formats: PNG, JPG, WebP. Image is automatically compressed and served via Cloudinary global CDN.
+                  </p>
+
                   {image && (
-                    <button
-                      type="button"
-                      className={styles.btnSm}
-                      style={{ width: "fit-content", color: "#b91c1c" }}
-                      onClick={() => setImage("")}
-                    >
-                      Remove photo
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing Options */}
-            <div style={{ padding: "12px 14px", background: "#f8faf8", borderRadius: 10, border: "1px solid #e2e8e2" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600, fontSize: 13.5 }}>
-                <input
-                  type="checkbox"
-                  checked={isVariantProduct}
-                  onChange={(e) => setIsVariantProduct(e.target.checked)}
-                />
-                Sold in pack sizes / quantity tiers (e.g. 100 pcs, 500 pcs)
-              </label>
-
-              {!isVariantProduct ? (
-                <div style={{ marginTop: 10 }}>
-                  <label className="lbl">Single Unit Price (BDT ৳)</label>
-                  <input
-                    className="field"
-                    type="number"
-                    step="1"
-                    placeholder="Leave empty for 'Price on request'"
-                    value={singlePrice}
-                    onChange={(e) => setSinglePrice(e.target.value)}
-                  />
-                </div>
-              ) : (
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-700)" }}>Pack Variant Tiers</span>
-                  {variants.map((v, i) => (
-                    <div key={v.id || i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "center" }}>
-                      <input
-                        className="field"
-                        type="text"
-                        placeholder="Pieces (e.g. 100)"
-                        value={v.pieces}
-                        onChange={(e) => handleVariantChange(i, "pieces", e.target.value)}
-                      />
-                      <input
-                        className="field"
-                        type="number"
-                        placeholder="Price ৳ (or empty)"
-                        value={v.price === null ? "" : v.price}
-                        onChange={(e) => handleVariantChange(i, "price", e.target.value)}
-                      />
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
                       <button
                         type="button"
                         className={styles.btnSm}
-                        onClick={() => handleRemoveVariant(i)}
-                        title="Delete tier"
+                        onClick={() => {
+                          navigator.clipboard.writeText(image);
+                          notify("success", "Cloudinary image URL copied.");
+                        }}
                       >
-                        ✕
+                        <Icon name="copy" size={13} /> Copy URL
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.btnSm} ${styles.btnDanger}`}
+                        onClick={() => setImage("")}
+                      >
+                        Remove Photo
                       </button>
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    className={styles.btnSm}
-                    onClick={handleAddVariant}
-                    style={{ alignSelf: "flex-start", marginTop: 4 }}
-                  >
-                    + Add Pack Tier
-                  </button>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Inventory Stock Levels */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label className="lbl">Stock Available (pcs)</label>
-                <input
-                  className="field"
-                  type="number"
-                  min="0"
-                  value={available}
-                  onChange={(e) => setAvailable(Number(e.target.value))}
-                />
               </div>
-              <div>
-                <label className="lbl">Low Stock Alert Level</label>
-                <input
-                  className="field"
-                  type="number"
-                  min="0"
-                  value={lowStockAt}
-                  onChange={(e) => setLowStockAt(Number(e.target.value))}
-                />
-              </div>
-            </div>
+            </Panel>
 
-            {/* Badges / Tags */}
-            <div style={{ display: "flex", gap: 18, marginTop: 4 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={isNew}
-                  onChange={(e) => setIsNew(e.target.checked)}
-                />
-                Mark as &quot;New Arrival&quot;
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={isPopular}
-                  onChange={(e) => setIsPopular(e.target.checked)}
-                />
-                Mark as &quot;Popular Product&quot;
-              </label>
-            </div>
+            {/* 3. Pricing & Variants */}
+            <Panel title="Pricing & Quantity Options" description="Set pricing either as a single price or multi-tier wholesale pack sizes.">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div
+                  style={{
+                    padding: "14px 18px",
+                    background: "#f8faf8",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8e2",
+                  }}
+                >
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
+                    <input
+                      type="checkbox"
+                      checked={isVariantProduct}
+                      onChange={(e) => setIsVariantProduct(e.target.checked)}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    Sold in pack variants / quantity cartons (e.g. 100 pcs, 500 pcs)
+                  </label>
+                  <p style={{ margin: "4px 0 0 28px", fontSize: 12, color: "var(--ink-500)" }}>
+                    Check this if customers choose between different carton or sleeve pack sizes.
+                  </p>
+                </div>
+
+                {!isVariantProduct ? (
+                  <div style={{ maxWidth: 320 }}>
+                    <label className="lbl">Single Unit Retail Price (BDT ৳)</label>
+                    <input
+                      className="field"
+                      type="number"
+                      step="1"
+                      placeholder="e.g. 18 (leave empty for 'Price on request')"
+                      value={singlePrice}
+                      onChange={(e) => setSinglePrice(e.target.value)}
+                    />
+                    <span style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 4, display: "block" }}>
+                      Leave blank if this item requires custom wholesale quotation.
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-800)" }}>
+                        Pack Size Tiers ({variants.length})
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.btnSm}
+                        onClick={handleAddVariant}
+                      >
+                        + Add Pack Tier
+                      </button>
+                    </div>
+
+                    <div className={styles.variantTableWrap}>
+                      <table className={styles.variantTable}>
+                        <thead>
+                          <tr>
+                            <th>Pack Size / Pieces</th>
+                            <th>Price in BDT (৳)</th>
+                            <th style={{ width: 44 }}></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {variants.map((v, i) => (
+                            <tr key={v.id || i}>
+                              <td>
+                                <input
+                                  className="field"
+                                  type="text"
+                                  placeholder="e.g. 100 pcs or Sleeve (50 pcs)"
+                                  value={v.pieces}
+                                  onChange={(e) => handleVariantChange(i, "pieces", e.target.value)}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  className="field"
+                                  type="number"
+                                  placeholder="Price (leave empty for 'On request')"
+                                  value={v.price === null ? "" : v.price}
+                                  onChange={(e) => handleVariantChange(i, "price", e.target.value)}
+                                />
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                <button
+                                  type="button"
+                                  className={styles.bannerClose}
+                                  onClick={() => handleRemoveVariant(i)}
+                                  title="Delete variant"
+                                  disabled={variants.length <= 1}
+                                >
+                                  <Icon name="close" size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Panel>
+
+            {/* 4. Technical Specifications */}
+            <Panel title="Technical Specifications" description="Material, usage, and dimensions listed on the product detail page.">
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {specs.map(([label, val], idx) => (
+                  <div key={idx} className={styles.specRow}>
+                    <input
+                      className="field"
+                      type="text"
+                      placeholder="Spec label (e.g. Material)"
+                      value={label}
+                      onChange={(e) => handleSpecChange(idx, "label", e.target.value)}
+                    />
+                    <input
+                      className="field"
+                      type="text"
+                      placeholder="Value (e.g. Food-grade PET)"
+                      value={val}
+                      onChange={(e) => handleSpecChange(idx, "value", e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={styles.bannerClose}
+                      onClick={() => handleRemoveSpec(idx)}
+                      title="Remove specification"
+                    >
+                      <Icon name="close" size={15} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className={styles.btnSm}
+                  onClick={handleAddSpec}
+                  style={{ alignSelf: "flex-start", marginTop: 4 }}
+                >
+                  + Add Specification
+                </button>
+              </div>
+            </Panel>
           </div>
 
-          <div className={styles.drawerFoot}>
-            <button type="button" className={styles.btn} onClick={onClose}>
-              Cancel
+          {/* Right Column (Sidebar, Categorization, Inventory, & Live Storefront Preview) */}
+          <div className={styles.editorColSide}>
+            {/* Live Storefront Card Preview */}
+            <Panel title="Storefront Live Preview" description="Real-time preview of how this product renders on /shop.">
+              <div style={{ background: "#ffffff", padding: "12px 0" }}>
+                <ProductCard
+                  name={name || "Product Name"}
+                  kind={kind}
+                  image={image || undefined}
+                  href="#"
+                  badge={isNew ? "new" : "in-stock"}
+                  meta={
+                    isVariantProduct
+                      ? `Packs of ${variants.map((v) => v.pieces).join(" · ")}`
+                      : capacityMl
+                      ? `${capacityMl} ml`
+                      : undefined
+                  }
+                  price={previewPrice}
+                  unit={isVariantProduct ? "by pack size" : undefined}
+                  action={
+                    <button type="button" className="btn btn-primary btn-block" disabled>
+                      {isVariantProduct ? "Choose options" : "Add to cart"}
+                    </button>
+                  }
+                />
+              </div>
+            </Panel>
+
+            {/* Categorization & 3D Shape */}
+            <Panel title="Classification">
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label className="lbl">Product Category</label>
+                  <select
+                    className="field"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as CategoryId)}
+                  >
+                    <option value="square">Square & Rectangular Boxes</option>
+                    <option value="round">Round Containers</option>
+                    <option value="dessert-cups">Dessert Cups</option>
+                    <option value="crates">Crates & Bulk Storage</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="lbl">3D Isometric Fallback Shape</label>
+                  <select
+                    className="field"
+                    value={kind}
+                    onChange={(e) => setKind(e.target.value as ShapeKind)}
+                  >
+                    <option value="square">Square Box</option>
+                    <option value="round">Round Container</option>
+                    <option value="cup">Semi-Square Cup</option>
+                    <option value="heart">Heart Cup</option>
+                    <option value="crate">Plastic Crate</option>
+                    <option value="rectClear">Rect Clear (Crystal)</option>
+                    <option value="rectBlack">Rect Black Base</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="lbl">Capacity in ml (optional)</label>
+                  <input
+                    className="field"
+                    type="number"
+                    placeholder="e.g. 500 or 1000"
+                    value={capacityMl}
+                    onChange={(e) => setCapacityMl(e.target.value)}
+                  />
+                </div>
+              </div>
+            </Panel>
+
+            {/* Warehouse Stock Levels */}
+            <Panel title="Inventory Control">
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label className="lbl">Available Stock (pcs)</label>
+                  <input
+                    className="field"
+                    type="number"
+                    min="0"
+                    value={available}
+                    onChange={(e) => setAvailable(Number(e.target.value))}
+                  />
+                </div>
+
+                <div>
+                  <label className="lbl">Low Stock Alert Level</label>
+                  <input
+                    className="field"
+                    type="number"
+                    min="0"
+                    value={lowStockAt}
+                    onChange={(e) => setLowStockAt(Number(e.target.value))}
+                  />
+                </div>
+
+                <div style={{ padding: "8px 12px", background: "#f8faf8", borderRadius: 8, fontSize: 12 }}>
+                  Health:{" "}
+                  {available === 0 ? (
+                    <strong style={{ color: "#dc2626" }}>Out of Stock</strong>
+                  ) : available <= lowStockAt ? (
+                    <strong style={{ color: "#d97706" }}>Low Stock Alert</strong>
+                  ) : (
+                    <strong style={{ color: "#059669" }}>Healthy Inventory</strong>
+                  )}
+                </div>
+              </div>
+            </Panel>
+
+            {/* Badges & Merchandising Tags */}
+            <Panel title="Badges & Tags">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={isNew}
+                    onChange={(e) => setIsNew(e.target.checked)}
+                  />
+                  Mark as &quot;New Arrival&quot;
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={isPopular}
+                    onChange={(e) => setIsPopular(e.target.checked)}
+                  />
+                  Mark as &quot;Popular Product&quot;
+                </label>
+              </div>
+            </Panel>
+          </div>
+        </div>
+
+        {/* Sticky Action Footer */}
+        <div className={styles.editorStickyFoot}>
+          <div style={{ fontSize: 13, color: "var(--ink-600)" }}>
+            {isEdit ? `Editing ${product?.name}` : "Creating new catalogue product"}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className={styles.btn} onClick={onBack} disabled={saving}>
+              Discard Changes
             </button>
             <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={saving}>
-              {saving ? "Saving to Firestore…" : isEdit ? "Update Product" : "Create Product"}
+              {saving ? "Saving to Firestore…" : isEdit ? "Save Changes" : "Publish Product"}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }
