@@ -60,8 +60,10 @@ export interface Product {
   name: string;
   category: CategoryId;
   kind: ShapeKind;
-  /** Cloudinary public ID or image URL. Falls back to isometric ProductShape when omitted. */
+  /** Primary cover image (Cloudinary public ID or image URL). Falls back to isometric ProductShape when omitted. */
   image?: string;
+  /** Complete gallery of image URLs or Cloudinary public IDs for this product. */
+  images?: string[];
   /** Capacity in ml, where the product name states one. */
   capacityMl?: number;
   summary: string;

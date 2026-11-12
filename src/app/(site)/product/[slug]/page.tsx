@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { ProductCard } from "@/components/commerce/ProductCard";
+import { ProductGallery } from "@/components/commerce/ProductGallery";
 import { ProductPurchase } from "@/components/commerce/ProductPurchase";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { CheckIcon } from "@/components/ui/Icons";
@@ -69,6 +70,13 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
     ...allProducts.filter((p) => p.category !== product.category && p.slug !== product.slug),
   ].slice(0, 4);
 
+  const productImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : product.image
+      ? [product.image]
+      : [];
+
   return (
     <div className={`wrap ${styles.page}`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData(product, category.name) }} />
@@ -82,31 +90,14 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
       />
 
       <div className={styles.top}>
-        <div className={styles.gallery}>
-          <div className={styles.stage}>
-            <div className={styles.tags}>
-              {product.tags.includes("new") && <span className={styles.tagNew}>New</span>}
-              <Link href={`/shop/${category.id}`} className={styles.tagCat}>
-                {category.short}
-              </Link>
-            </div>
-            <div className={styles.shape}>
-              {product.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={buildCloudinaryUrl(product.image, { width: 800, height: 800, crop: "fill" })}
-                  alt={product.name}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
-                />
-              ) : (
-                <ProductShape kind={product.kind} />
-              )}
-            </div>
-            <p className={styles.caption}>
-              {product.image ? "Product photography." : "Illustration — product photography to follow."}
-            </p>
-          </div>
-        </div>
+        <ProductGallery
+          name={product.name}
+          kind={product.kind}
+          images={productImages}
+          categoryId={category.id}
+          categoryShort={category.short}
+          isNew={product.tags.includes("new")}
+        />
 
         <div className={styles.info}>
           <h1 className={styles.title}>{product.name}</h1>

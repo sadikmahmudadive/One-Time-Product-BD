@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CATEGORIES, priceLabel, lowestPrice, type CategoryId, type Product, type Variant } from "@/lib/catalog";
 import type { ShapeKind } from "@/lib/content";
-import { buildCloudinaryUrl, uploadClientImage } from "@/lib/cloudinary/client";
+import { buildCloudinaryUrl, uploadClientImage, uploadMultipleClientImages } from "@/lib/cloudinary/client";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { formatPrice } from "@/lib/format";
@@ -211,12 +211,13 @@ export function ProductsView({
                             alignItems: "center",
                             justifyContent: "center",
                             border: "1px solid var(--line-200, #e2e8e2)",
+                            position: "relative",
                           }}
                         >
-                          {p.image ? (
+                          {p.image || (p.images && p.images[0]) ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={buildCloudinaryUrl(p.image, { width: 104, height: 104, crop: "fill" })}
+                              src={buildCloudinaryUrl(p.image || p.images![0], { width: 104, height: 104, crop: "fill" })}
                               alt={p.name}
                               style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
@@ -224,6 +225,25 @@ export function ProductsView({
                             <div style={{ width: 38, height: 38 }}>
                               <ProductShape kind={p.kind} />
                             </div>
+                          )}
+                          {p.images && p.images.length > 1 && (
+                            <span
+                              style={{
+                                position: "absolute",
+                                bottom: 2,
+                                right: 2,
+                                background: "rgba(16, 45, 37, 0.88)",
+                                color: "#ffffff",
+                                fontSize: 9,
+                                fontWeight: 700,
+                                padding: "1px 4px",
+                                borderRadius: 4,
+                                lineHeight: 1.1,
+                              }}
+                              title={`${p.images.length} photos in gallery`}
+                            >
+                              📷 {p.images.length}
+                            </span>
                           )}
                         </div>
                       </td>
@@ -343,7 +363,16 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
   const [category, setCategory] = useState<CategoryId>(product?.category || "square");
   const [kind, setKind] = useState<ShapeKind>(product?.kind || "square");
   const [summary, setSummary] = useState(product?.summary || "");
-  const [image, setImage] = useState(product?.image || "");
+  const [images, setImages] = useState<string[]>(() => {
+    if (product?.images && product.images.length > 0) return product.images;
+    if (product?.image) return [product.image];
+    return [];
+  });
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [previewImgIndex, setPreviewImgIndex] = useState(0);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [capacityMl, setCapacityMl] = useState<string>(product?.capacityMl ? String(product?.capacityMl) : "");
   const [isVariantProduct, setIsVariantProduct] = useState(Boolean(product?.variants?.length));
   const [singlePrice, setSinglePrice] = useState<string>(product?.price !== null && product?.price !== undefined ? String(product.price) : "");
@@ -365,7 +394,6 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
   const [isPopular, setIsPopular] = useState(product?.tags?.includes("popular") ?? false);
   const [available, setAvailable] = useState<number>(product?.available ?? 50);
   const [lowStockAt, setLowStockAt] = useState<number>(product?.lowStockAt ?? 10);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function handleNameChange(val: string) {
@@ -380,19 +408,66 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
     }
   }
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleFilesUpload(filesList: FileList | null) {
+    if (!filesList || filesList.length === 0) return;
+    const files = Array.from(filesList);
+    setUploadingImages(true);
+    setUploadProgress({ completed: 0, total: files.length });
+
     try {
-      setUploadingImage(true);
-      const res = await uploadClientImage(file);
-      setImage(res.secureUrl);
-      notify("success", "Photo uploaded directly to Cloudinary.");
+      const results = await uploadMultipleClientImages(files, (completed, total) => {
+        setUploadProgress({ completed, total });
+      });
+      const newUrls = results.map((r) => r.secureUrl);
+      setImages((prev) => [...prev, ...newUrls]);
+      notify(
+        "success",
+        `Successfully uploaded ${results.length} ${results.length === 1 ? "photo" : "photos"} to Cloudinary.`
+      );
     } catch (err) {
-      notify("error", (err as Error).message || "Upload failed");
+      notify("error", (err as Error).message || "Failed to upload one or more photos.");
     } finally {
-      setUploadingImage(false);
+      setUploadingImages(false);
+      setUploadProgress(null);
     }
+  }
+
+  function handleSetCover(index: number) {
+    if (index === 0) return;
+    setImages((prev) => {
+      const target = prev[index];
+      const rest = prev.filter((_, i) => i !== index);
+      return [target, ...rest];
+    });
+    setPreviewImgIndex(0);
+    notify("success", "Cover photo set.");
+  }
+
+  function handleMoveImage(index: number, direction: "left" | "right") {
+    setImages((prev) => {
+      const targetIndex = direction === "left" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return copy;
+    });
+  }
+
+  function handleRemoveImage(index: number) {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    if (previewImgIndex >= index && previewImgIndex > 0) {
+      setPreviewImgIndex((prev) => prev - 1);
+    }
+  }
+
+  function handleAddUrl() {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    setImages((prev) => [...prev, trimmed]);
+    setUrlInput("");
+    notify("success", "Image URL added to gallery.");
   }
 
   function handleAddVariant() {
@@ -453,6 +528,8 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
     if (isPopular) tags.push("popular");
 
     const validSpecs = specs.filter(([k, v]) => k.trim() !== "" || v.trim() !== "");
+    const cleanImages = images.map((s) => s.trim()).filter(Boolean);
+    const primaryImage = cleanImages[0] || undefined;
 
     const payload: Product = {
       slug: cleanSlug,
@@ -460,7 +537,8 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
       category,
       kind,
       summary: summary.trim(),
-      image: image.trim() || undefined,
+      image: primaryImage,
+      images: cleanImages.length > 0 ? cleanImages : undefined,
       capacityMl: capacityMl ? Number(capacityMl) : undefined,
       price: isVariantProduct ? null : singlePrice.trim() !== "" ? Number(singlePrice) : null,
       variants: isVariantProduct ? variants : undefined,
@@ -591,76 +669,182 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
               </div>
             </Panel>
 
-            {/* 2. Cloudinary Media Asset */}
-            <Panel title="Media & Photography" description="High-resolution product photographs stored on Cloudinary.">
-              <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    width: 140,
-                    height: 140,
-                    borderRadius: 12,
-                    background: "#f8faf8",
-                    border: "2px dashed #cbd5cb",
-                    overflow: "hidden",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
+            {/* 2. Cloudinary Media Asset (Multi-Image Gallery) */}
+            <Panel
+              title={`Product Photography & Gallery (${images.length})`}
+              description="Upload multiple high-resolution photos for this product. The first photo serves as the storefront cover."
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* Drag and Drop Zone */}
+                <label
+                  className={`${styles.uploadDropzone} ${isDragOver ? styles.uploadDropzoneDragOver : ""}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    if (e.dataTransfer.files) {
+                      handleFilesUpload(e.dataTransfer.files);
+                    }
                   }}
                 >
-                  {image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={buildCloudinaryUrl(image, { width: 280, height: 280, crop: "fill" })}
-                      alt="Uploaded preview"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <div style={{ textAlign: "center", color: "var(--ink-400)", padding: 8 }}>
-                      <span style={{ fontSize: 32 }}>☁️</span>
-                      <p style={{ margin: "4px 0 0", fontSize: 11 }}>No photo yet</p>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      handleFilesUpload(e.target.files);
+                      e.target.value = "";
+                    }}
+                    disabled={uploadingImages}
+                  />
+                  <div style={{ pointerEvents: "none" }}>
+                    <div style={{ fontSize: 32, marginBottom: 6 }}>☁️</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "var(--ink-900)" }}>
+                      {uploadingImages
+                        ? `Uploading ${uploadProgress ? `(${uploadProgress.completed} of ${uploadProgress.total})` : "photos"} to Cloudinary…`
+                        : "Click to browse or drag & drop multiple packaging photos"}
                     </div>
-                  )}
-                </div>
+                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--ink-500)" }}>
+                      PNG, JPG, WebP supported. Multiple images are automatically optimized and served via CDN.
+                    </p>
+                  </div>
+                </label>
 
-                <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <label className={`${styles.btn} ${styles.btnPrimary}`} style={{ cursor: "pointer", width: "fit-content" }}>
-                    <Icon name="upload" size={15} />
-                    {uploadingImage ? "Uploading to Cloudinary…" : "Upload Packaging Photo"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={handleImageUpload}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-
-                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-500)", lineHeight: 1.5 }}>
-                    Accepted formats: PNG, JPG, WebP. Image is automatically compressed and served via Cloudinary global CDN.
-                  </p>
-
-                  {image && (
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
-                      <button
-                        type="button"
-                        className={styles.btnSm}
-                        onClick={() => {
-                          navigator.clipboard.writeText(image);
-                          notify("success", "Cloudinary image URL copied.");
+                {/* Upload Progress Bar if active */}
+                {uploadingImages && uploadProgress && (
+                  <div className={styles.uploadProgressWrap}>
+                    <span style={{ fontWeight: 600 }}>Uploading to Cloudinary:</span>
+                    <span>
+                      {uploadProgress.completed} of {uploadProgress.total} finished
+                    </span>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 6,
+                        background: "#a7f3d0",
+                        borderRadius: 3,
+                        overflow: "hidden",
+                        marginLeft: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.round((uploadProgress.completed / uploadProgress.total) * 100)}%`,
+                          background: "#059669",
+                          transition: "width 200ms ease",
                         }}
-                      >
-                        <Icon name="copy" size={13} /> Copy URL
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.btnSm} ${styles.btnDanger}`}
-                        onClick={() => setImage("")}
-                      >
-                        Remove Photo
-                      </button>
+                      />
                     </div>
-                  )}
+                  </div>
+                )}
+
+                {/* Visual Gallery Grid */}
+                {images.length > 0 && (
+                  <div className={styles.imageGrid}>
+                    {images.map((img, idx) => {
+                      const isCover = idx === 0;
+                      return (
+                        <div
+                          key={`${img}-${idx}`}
+                          className={`${styles.imageCard} ${isCover ? styles.imageCardCover : ""}`}
+                        >
+                          <div className={styles.imageThumbWrap}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={buildCloudinaryUrl(img, { width: 320, height: 260, crop: "fill" })}
+                              alt={`Product photo ${idx + 1}`}
+                              className={styles.imageThumb}
+                            />
+                            {isCover && (
+                              <span className={styles.coverBadge}>
+                                ★ Cover Photo
+                              </span>
+                            )}
+                          </div>
+
+                          <div className={styles.imageCardActions}>
+                            <div style={{ display: "flex", gap: 3 }}>
+                              {!isCover && (
+                                <button
+                                  type="button"
+                                  className={styles.imageActionBtn}
+                                  onClick={() => handleSetCover(idx)}
+                                  title="Make this the primary cover photo"
+                                >
+                                  Make Cover
+                                </button>
+                              )}
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  className={styles.imageActionBtn}
+                                  onClick={() => handleMoveImage(idx, "left")}
+                                  title="Move earlier in gallery"
+                                >
+                                  ‹
+                                </button>
+                              )}
+                              {idx < images.length - 1 && (
+                                <button
+                                  type="button"
+                                  className={styles.imageActionBtn}
+                                  onClick={() => handleMoveImage(idx, "right")}
+                                  title="Move later in gallery"
+                                >
+                                  ›
+                                </button>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              className={`${styles.imageActionBtn} ${styles.imageActionDanger}`}
+                              onClick={() => handleRemoveImage(idx)}
+                              title="Delete photo from gallery"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Manual Add by URL */}
+                <div className={styles.urlAddRow}>
+                  <input
+                    type="text"
+                    className="field"
+                    placeholder="Or paste direct image URL / Cloudinary public ID…"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddUrl();
+                      }
+                    }}
+                    style={{ fontSize: 13 }}
+                  />
+                  <button
+                    type="button"
+                    className={`${styles.btnSm} ${styles.btnPrimary}`}
+                    onClick={handleAddUrl}
+                    disabled={!urlInput.trim()}
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    + Add URL
+                  </button>
                 </div>
               </div>
             </Panel>
@@ -820,7 +1004,7 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
                 <ProductCard
                   name={name || "Product Name"}
                   kind={kind}
-                  image={image || undefined}
+                  image={images[previewImgIndex] || images[0] || undefined}
                   href="#"
                   badge={isNew ? "new" : "in-stock"}
                   meta={
@@ -838,6 +1022,40 @@ function ProductEditorPage({ product, onBack, onSave, notify }: ProductEditorPag
                     </button>
                   }
                 />
+
+                {images.length > 1 && (
+                  <div style={{ display: "flex", gap: 6, marginTop: 12, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, color: "var(--ink-500)", marginRight: 4 }}>
+                      Previewing photo {previewImgIndex + 1} of {images.length}:
+                    </span>
+                    {images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setPreviewImgIndex(idx)}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 6,
+                          border: idx === previewImgIndex ? "2px solid var(--brand-950, #102d25)" : "1px solid #d5ded6",
+                          overflow: "hidden",
+                          padding: 0,
+                          cursor: "pointer",
+                          background: "#ffffff",
+                          boxShadow: idx === previewImgIndex ? "0 0 0 1px var(--accent-500, #b7d957)" : "none",
+                        }}
+                        title={`Preview photo ${idx + 1}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={buildCloudinaryUrl(img, { width: 56, height: 56, crop: "fill" })}
+                          alt=""
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </Panel>
 

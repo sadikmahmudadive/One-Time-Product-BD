@@ -132,6 +132,13 @@ export async function saveInventoryToFirestore(
 
 /** Serializes a product for Cloud Firestore (converts nested array specs to objects, strips undefined). */
 function serializeProductForFirestore(p: Product): Record<string, unknown> {
+  const images = Array.isArray(p.images)
+    ? p.images.map((s) => String(s).trim()).filter(Boolean)
+    : p.image
+    ? [String(p.image).trim()]
+    : [];
+  const primaryImage = p.image?.trim() || images[0] || null;
+
   const data: Record<string, unknown> = {
     slug: p.slug,
     name: p.name,
@@ -144,7 +151,8 @@ function serializeProductForFirestore(p: Product): Record<string, unknown> {
     updatedAt: serverTimestamp(),
   };
 
-  if (p.image) data.image = p.image;
+  if (primaryImage) data.image = primaryImage;
+  if (images.length > 0) data.images = images;
   if (p.capacityMl !== undefined && p.capacityMl !== null) data.capacityMl = p.capacityMl;
   if (p.variants && p.variants.length > 0) {
     data.variants = p.variants.map((v) => ({
@@ -170,6 +178,14 @@ function deserializeProductFromFirestore(docId: string, data: Record<string, unk
     return ["", ""];
   });
 
+  const rawImages = Array.isArray(data.images)
+    ? (data.images as unknown[])
+        .filter((x): x is string => typeof x === "string" && x.trim() !== "")
+        .map((x) => x.trim())
+    : [];
+  const primaryImage = (data.image as string)?.trim() || rawImages[0] || undefined;
+  const images = rawImages.length > 0 ? rawImages : primaryImage ? [primaryImage] : [];
+
   return {
     slug: (data.slug as string) || docId,
     name: (data.name as string) || "",
@@ -177,7 +193,8 @@ function deserializeProductFromFirestore(docId: string, data: Record<string, unk
     kind: (data.kind as Product["kind"]) || "square",
     summary: (data.summary as string) || "",
     price: data.price !== undefined ? (data.price as number | null) : null,
-    image: (data.image as string) || undefined,
+    image: primaryImage,
+    images: images.length > 0 ? images : undefined,
     capacityMl: data.capacityMl !== undefined && data.capacityMl !== null ? (data.capacityMl as number) : undefined,
     variants: data.variants as Product["variants"],
     tags: (data.tags as ("new" | "popular")[]) || [],
@@ -274,12 +291,13 @@ export async function saveProductToFirestore(product: Product): Promise<void> {
   const data = serializeProductForFirestore({ ...product, slug });
   await setDoc(docRef, data, { merge: true });
 
-  if (product.available !== undefined || product.lowStockAt !== undefined || product.image) {
+  const primaryImage = product.image || (product.images && product.images[0]);
+  if (product.available !== undefined || product.lowStockAt !== undefined || primaryImage) {
     await saveInventoryToFirestore(
       slug,
       product.available ?? 0,
       product.lowStockAt ?? 10,
-      product.image
+      primaryImage
     );
   }
 }

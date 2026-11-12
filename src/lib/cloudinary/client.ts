@@ -102,3 +102,30 @@ export async function uploadClientImage(file: File): Promise<UploadResult> {
   };
 }
 
+/**
+ * Uploads multiple files directly to Cloudinary with concurrent uploads and optional progress callback.
+ */
+export async function uploadMultipleClientImages(
+  files: File[],
+  onProgress?: (completed: number, total: number) => void
+): Promise<UploadResult[]> {
+  let completed = 0;
+  const total = files.length;
+
+  const uploadPromises = files.map(async (file) => {
+    try {
+      const res = await uploadClientImage(file);
+      completed += 1;
+      onProgress?.(completed, total);
+      return res;
+    } catch (err) {
+      completed += 1;
+      onProgress?.(completed, total);
+      throw err;
+    }
+  });
+
+  return Promise.all(uploadPromises);
+}
+
+
