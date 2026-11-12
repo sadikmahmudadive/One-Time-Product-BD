@@ -380,3 +380,21 @@ html.lenis body {
     opacity: 1;
   }
 }
+
+/* Printing the admin delivery slip: hide everything except the slip while one is on screen. */
+@media print {
+  body:has(.admin-slip) * {
+    visibility: hidden;
+  }
+  .admin-slip,
+  .admin-slip * {
+    visibility: visible;
+  }
+  .admin-slip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+  }
+}

@@ -1,22 +1,28 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useAuth } from "@/lib/firebase/auth-context";
 import { isAdminEmail } from "@/lib/admin";
+import { useAuth } from "@/lib/firebase/auth-context";
 import styles from "./admin.module.css";
 
+/**
+ * Keeps non-admins out of /admin. The dashboard draws its own chrome, so this only gates access.
+ * Real protection is the Firestore rules; this stops the UI from rendering for everyone else.
+ */
 export function AdminGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, isConfigured, logOut } = useAuth();
+  const { user, loading, isConfigured } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const admin = isAdminEmail(user?.email);
-  const loginRoute = pathname === "/admin/login";
-  useEffect(() => { if (!loginRoute && !loading && (!isConfigured || !user || !admin)) router.replace("/admin/login"); }, [loginRoute, loading, isConfigured, user, admin, router]);
-  if (loginRoute) return <>{children}</>;
-  if (loading) return <div className={styles.center}>Checking access…</div>;
-  if (!isConfigured || !user || !admin) return <div className={styles.center}>Redirecting to sign in…</div>;
-  return <div className={styles.shell}><header className={styles.header}><Link href="/admin" className={styles.brand}>One Time <span>Operations</span></Link><div><span className={styles.email}>{user.email}</span><button className={styles.signout} onClick={() => logOut()}>Sign out</button></div></header><nav className={styles.nav} aria-label="Admin"><Link href="/admin">Dashboard</Link><Link href="/shop">Storefront</Link><Link href="/">Website home</Link></nav><main className={styles.main}>{children}</main></div>;
+  const onLogin = pathname === "/admin/login";
+
+  useEffect(() => {
+    if (!onLogin && !loading && (!isConfigured || !user || !admin)) router.replace("/admin/login");
+  }, [onLogin, loading, isConfigured, user, admin, router]);
+
+  if (onLogin) return <>{children}</>;
+  if (loading) return <div className={styles.gateMsg} role="status">Checking access…</div>;
+  if (!isConfigured || !user || !admin) return <div className={styles.gateMsg} role="status">Redirecting to sign in…</div>;
+  return <>{children}</>;
 }

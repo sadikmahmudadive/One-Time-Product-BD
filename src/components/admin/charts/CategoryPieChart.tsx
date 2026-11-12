@@ -1,55 +1,34 @@
 "use client";
 
-import { CATEGORIES } from "@/lib/catalog";
+import { CATEGORIES, getProduct } from "@/lib/catalog";
+import type { OrderRecord } from "@/lib/firebase/firestore";
 import { DonutChart, type DonutSegment } from "./DonutChart";
 
-interface CategoryPieChartProps {
-  orders: import("@/lib/firebase/firestore").OrderRecord[];
-}
+const COLORS: Record<string, string> = {
+  square: "#173C31",
+  round: "#347A5D",
+  "dessert-cups": "#B7D957",
+  crates: "#E0A030",
+};
 
-export function CategoryPieChart({ orders }: CategoryPieChartProps) {
-  // Compute item counts by category from orders
-  const counts: Record<string, number> = {
-    square: 0,
-    round: 0,
-    "dessert-cups": 0,
-    crates: 0,
-  };
-
-  orders.forEach((o) => {
-    o.items.forEach((item) => {
-      // Find category or guess by slug
-      if (item.slug.includes("square") || item.slug.includes("box")) counts.square += item.qty;
-      else if (item.slug.includes("round") || item.slug.includes("biscuit")) counts.round += item.qty;
-      else if (item.slug.includes("cup") || item.slug.includes("heart") || item.slug.includes("semi")) counts["dessert-cups"] += item.qty;
-      else if (item.slug.includes("crate")) counts.crates += item.qty;
-      else counts.square += item.qty;
-    });
-  });
-
-  const colors: Record<string, string> = {
-    square: "#173C31",
-    round: "#347A5D",
-    "dessert-cups": "#B7D957",
-    crates: "#0284C7",
-  };
+/** Units ordered per product family, using each product's catalogue category. */
+export function CategoryPieChart({ orders }: { orders: OrderRecord[] }) {
+  const counts: Record<string, number> = {};
+  for (const o of orders) {
+    if (o.status === "cancelled") continue;
+    for (const item of o.items) {
+      const category = getProduct(item.slug)?.category;
+      if (category) counts[category] = (counts[category] ?? 0) + item.qty;
+    }
+  }
 
   const segments: DonutSegment[] = CATEGORIES.map((cat) => ({
     label: cat.short,
-    value: counts[cat.id] || 0,
-    color: colors[cat.id] || "#77827B",
-    formattedValue: `${(counts[cat.id] || 0).toLocaleString()} pcs`,
+    value: counts[cat.id] ?? 0,
+    color: COLORS[cat.id] ?? "#77827B",
+    formattedValue: `${(counts[cat.id] ?? 0).toLocaleString()} units`,
   }));
+  const totalUnits = segments.reduce((sum, s) => sum + s.value, 0);
 
-  const totalUnits = Object.values(counts).reduce((a, b) => a + b, 0);
-
-  return (
-    <DonutChart
-      data={segments}
-      centerValue={totalUnits > 0 ? `${totalUnits}` : "0"}
-      centerLabel="Units Ordered"
-      size={160}
-    />
-  );
+  return <DonutChart data={segments} centerValue={totalUnits.toLocaleString()} centerLabel="Units ordered" />;
 }
-
