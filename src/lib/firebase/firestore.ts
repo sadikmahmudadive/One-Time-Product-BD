@@ -130,6 +130,63 @@ export async function saveInventoryToFirestore(
   await setDoc(doc(requireDb(), "inventory", slug), data, { merge: true });
 }
 
+/** Serializes a product for Cloud Firestore (converts nested array specs to objects, strips undefined). */
+function serializeProductForFirestore(p: Product): Record<string, unknown> {
+  const data: Record<string, unknown> = {
+    slug: p.slug,
+    name: p.name,
+    category: p.category,
+    kind: p.kind,
+    summary: p.summary || "",
+    price: p.price ?? null,
+    tags: p.tags || [],
+    specs: (p.specs || []).map((s) => (Array.isArray(s) ? { label: s[0], value: s[1] } : s)),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (p.image) data.image = p.image;
+  if (p.capacityMl !== undefined && p.capacityMl !== null) data.capacityMl = p.capacityMl;
+  if (p.variants && p.variants.length > 0) {
+    data.variants = p.variants.map((v) => ({
+      id: v.id,
+      pieces: v.pieces,
+      price: v.price ?? null,
+    }));
+  }
+  if (p.available !== undefined && p.available !== null) data.available = p.available;
+  if (p.lowStockAt !== undefined && p.lowStockAt !== null) data.lowStockAt = p.lowStockAt;
+
+  return data;
+}
+
+/** Deserializes a product document from Cloud Firestore. */
+function deserializeProductFromFirestore(docId: string, data: Record<string, unknown>): Product {
+  const specsRaw = data.specs as ({ label: string; value: string } | [string, string])[] | undefined;
+  const specs: [string, string][] = (specsRaw || []).map((s) => {
+    if (Array.isArray(s)) return [String(s[0]), String(s[1])];
+    if (s && typeof s === "object" && "label" in s && "value" in s) {
+      return [String(s.label), String(s.value)];
+    }
+    return ["", ""];
+  });
+
+  return {
+    slug: (data.slug as string) || docId,
+    name: (data.name as string) || "",
+    category: (data.category as Product["category"]) || "square",
+    kind: (data.kind as Product["kind"]) || "square",
+    summary: (data.summary as string) || "",
+    price: data.price !== undefined ? (data.price as number | null) : null,
+    image: (data.image as string) || undefined,
+    capacityMl: data.capacityMl !== undefined && data.capacityMl !== null ? (data.capacityMl as number) : undefined,
+    variants: data.variants as Product["variants"],
+    tags: (data.tags as ("new" | "popular")[]) || [],
+    specs,
+    available: data.available !== undefined && data.available !== null ? (data.available as number) : undefined,
+    lowStockAt: data.lowStockAt !== undefined && data.lowStockAt !== null ? (data.lowStockAt as number) : undefined,
+  };
+}
+
 /** Fetch all catalogue products from Firestore, merged with inventory data. */
 export async function getProductsFromFirestore(): Promise<Product[]> {
   try {
@@ -148,14 +205,13 @@ export async function getProductsFromFirestore(): Promise<Product[]> {
 
     if (productsSnap.status === "fulfilled" && !productsSnap.value.empty) {
       return productsSnap.value.docs.map((d) => {
-        const data = d.data() as Product;
+        const product = deserializeProductFromFirestore(d.id, d.data());
         const inv = inventoryMap.get(d.id);
         return {
-          ...data,
-          slug: d.id,
-          image: inv?.imageUrl || data.image,
-          available: inv?.available ?? data.available,
-          lowStockAt: inv?.lowStockAt ?? data.lowStockAt,
+          ...product,
+          image: inv?.imageUrl || product.image,
+          available: inv?.available ?? product.available,
+          lowStockAt: inv?.lowStockAt ?? product.lowStockAt,
         };
       });
     }
@@ -187,7 +243,7 @@ export async function getProductFromFirestore(slug: string): Promise<Product | n
 
     let base: Product | null = null;
     if (docSnap.status === "fulfilled" && docSnap.value.exists()) {
-      base = { slug: docSnap.value.id, ...(docSnap.value.data() as Omit<Product, "slug">) };
+      base = deserializeProductFromFirestore(docSnap.value.id, docSnap.value.data());
     } else {
       const staticP = PRODUCTS.find((p) => p.slug === slug);
       if (staticP) base = { ...staticP };
@@ -215,22 +271,7 @@ export async function saveProductToFirestore(product: Product): Promise<void> {
   const slug = product.slug.trim().toLowerCase();
   const docRef = doc(database, "products", slug);
 
-  const data: Record<string, unknown> = {
-    slug,
-    name: product.name,
-    category: product.category,
-    kind: product.kind,
-    summary: product.summary || "",
-    price: product.price ?? null,
-    tags: product.tags || [],
-    specs: product.specs || [],
-    updatedAt: serverTimestamp(),
-  };
-
-  if (product.image) data.image = product.image;
-  if (product.capacityMl !== undefined) data.capacityMl = product.capacityMl;
-  if (product.variants && product.variants.length > 0) data.variants = product.variants;
-
+  const data = serializeProductForFirestore({ ...product, slug });
   await setDoc(docRef, data, { merge: true });
 
   if (product.available !== undefined || product.lowStockAt !== undefined || product.image) {
@@ -257,14 +298,8 @@ export async function seedCatalogToFirestore(): Promise<number> {
   const database = requireDb();
   let count = 0;
   for (const product of PRODUCTS) {
-    await setDoc(
-      doc(database, "products", product.slug),
-      {
-        ...product,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    const data = serializeProductForFirestore(product);
+    await setDoc(doc(database, "products", product.slug), data, { merge: true });
     count++;
   }
   return count;

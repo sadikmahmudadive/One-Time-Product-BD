@@ -57,9 +57,8 @@ export function ProductsView({
     try {
       setSeeding(true);
       await onSeed();
-      notify("success", "Catalogue successfully synchronized to Firestore.");
     } catch {
-      notify("error", "Failed to sync catalogue to Firestore. Check permissions.");
+      // onSeed in AdminDashboard already notifies with exact error
     } finally {
       setSeeding(false);
     }

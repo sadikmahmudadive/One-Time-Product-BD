@@ -267,11 +267,12 @@ export function AdminDashboard() {
 
   async function handleSeedCatalog() {
     try {
-      await seedCatalogToFirestore();
+      const count = await seedCatalogToFirestore();
       await loadData();
-      notify("success", "Catalogue successfully synchronized to Firestore.");
+      notify("success", `Successfully synchronized ${count} products to Firestore.`);
     } catch (err) {
-      notify("error", "Failed to sync catalogue. Check permissions.");
+      const msg = (err as Error)?.message || "Check permissions and connection.";
+      notify("error", `Failed to sync catalogue: ${msg}`);
       throw err;
     }
   }
