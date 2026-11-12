@@ -7,6 +7,7 @@ import { PRODUCTS } from "@/lib/catalog";
 import { ENQUIRY_STATUSES, exportCsv, formatDate } from "@/lib/admin-utils";
 import type { EnquiryStatus, OrderStatus } from "@/lib/admin-utils";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { DEMO_ORDERS, DEMO_QUOTES, DEMO_SUBSCRIBERS } from "@/lib/mock-admin-data";
 import {
   getEnquiriesFromFirestore,
   getInventoryFromFirestore,
@@ -68,6 +69,44 @@ const TITLES: Record<Tab, string> = {
   customers: "Customers",
 };
 
+const FIRESTORE_RULES_SNIPPET = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && 
+        ('email' in request.auth.token) &&
+        (
+          request.auth.token.email.lower() in [
+            'onetimeproductbd@gmail.com',
+            'siradive137@gmail.com',
+            'vertexhand@gmail.com'
+          ] ||
+          request.auth.token.email in [
+            'onetimeproductbd@gmail.com',
+            'siradive137@gmail.com',
+            'vertexhand@gmail.com'
+          ]
+        );
+    }
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+    }
+    match /enquiries/{enquiryId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    match /subscribers/{subscriberId} {
+      allow create: if true;
+      allow read, write: if isAdmin();
+    }
+    match /inventory/{slug} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}`;
+
 function tabFromHash(): Tab {
   const hash = window.location.hash.replace("#", "") as Tab;
   return TABS.includes(hash) ? hash : "overview";
@@ -82,6 +121,8 @@ export function AdminDashboard() {
   const [inventory, setInventory] = useState<InventoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [copiedRules, setCopiedRules] = useState(false);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
@@ -139,7 +180,11 @@ export function AdminDashboard() {
     if (inventoryRes.status === "fulfilled") setInventory(inventoryRes.value);
     else failed.push(`inventory (${reason(inventoryRes)})`);
 
-    if (failed.length) setLoadError(`Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account is an approved admin.`);
+    if (failed.length) {
+      setLoadError(`Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account is an approved admin.`);
+    } else {
+      setIsDemoMode(false);
+    }
     setSyncedAt(new Date());
     setLoading(false);
   }, []);
@@ -170,18 +215,26 @@ export function AdminDashboard() {
   async function changeOrderStatus(id: string, status: OrderStatus) {
     const previous = orders;
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    if (isDemoMode) {
+      notify("success", `[Demo] Order #${id.slice(-7).toUpperCase()} marked ${status}.`);
+      return;
+    }
     try {
       await updateOrderStatus(id, status);
       notify("success", `Order #${id.slice(-7).toUpperCase()} marked ${status}.`);
     } catch {
       setOrders(previous);
-      notify("error", "Couldn’t update the order. It has been put back to its previous status.");
+      notify("error", "Couldn’t update the order. Check your connection and permissions.");
     }
   }
 
   async function changeEnquiryStatus(id: string, status: EnquiryStatus) {
     const previous = enquiries;
     setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+    if (isDemoMode) {
+      notify("success", `[Demo] Marked ${ENQUIRY_STATUSES.find((s) => s.value === status)?.label.toLowerCase() ?? status}.`);
+      return;
+    }
     try {
       await updateEnquiryStatus(id, status);
       notify("success", `Marked ${ENQUIRY_STATUSES.find((s) => s.value === status)?.label.toLowerCase() ?? status}.`);
@@ -340,7 +393,8 @@ export function AdminDashboard() {
             <strong>{TITLES[tab]}</strong>
           </div>
           <div className={styles.topActions}>
-            {syncedAt && <span className={styles.synced}>Updated {syncedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>}
+            {isDemoMode && <span className={styles.demoBadge}>Demo Preview Mode</span>}
+            {syncedAt && !isDemoMode && <span className={styles.synced}>Updated {syncedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>}
             <button type="button" className={styles.btn} onClick={loadData} disabled={loading}>
               <span className={loading ? styles.spin : undefined}>
                 <Icon name="refresh" size={16} />
@@ -355,12 +409,75 @@ export function AdminDashboard() {
 
         <main ref={mainRef} className={styles.main} id="admin-main">
           {loadError && (
-            <div className={styles.banner} role="alert">
-              <Icon name="alert" size={18} />
-              <p>{loadError}</p>
-              <button type="button" className={styles.btnSm} onClick={loadData}>
-                Try again
-              </button>
+            <div className={styles.permissionNotice} role="alert">
+              <div className={styles.permissionNoticeHead}>
+                <div className={styles.permissionNoticeTitle}>
+                  <Icon name="alert" size={19} />
+                  <span>Firestore Permission Configuration</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.bannerClose}
+                  onClick={() => setLoadError("")}
+                  aria-label="Dismiss banner"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              </div>
+
+              <div className={styles.permissionNoticeBody}>
+                <p>
+                  <strong>{loadError}</strong>
+                </p>
+                <p style={{ marginTop: 6 }}>
+                  Active account: <strong>{user?.email || "anonymous"}</strong>. To grant access, publish your rules in Firebase Console.
+                </p>
+              </div>
+
+              <div className={styles.permissionNoticeActions}>
+                <a
+                  href="https://console.firebase.google.com/project/onetime-product/firestore/rules"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${styles.btnSm} ${styles.btnPrimary}`}
+                >
+                  Open Firebase Rules <Icon name="external" size={14} />
+                </a>
+
+                <button
+                  type="button"
+                  className={styles.btnSm}
+                  onClick={() => {
+                    navigator.clipboard.writeText(FIRESTORE_RULES_SNIPPET);
+                    setCopiedRules(true);
+                    notify("success", "Firestore security rules copied to clipboard!");
+                    setTimeout(() => setCopiedRules(false), 2500);
+                  }}
+                >
+                  <Icon name="check" size={14} />
+                  {copiedRules ? "Copied!" : "Copy firestore.rules"}
+                </button>
+
+                {!isDemoMode && (
+                  <button
+                    type="button"
+                    className={styles.btnSm}
+                    onClick={() => {
+                      setIsDemoMode(true);
+                      setOrders(DEMO_ORDERS);
+                      setEnquiries(DEMO_QUOTES);
+                      setSubscribers(DEMO_SUBSCRIBERS);
+                      notify("success", "Sample demo orders, quotes, and metrics loaded.");
+                    }}
+                  >
+                    Load Sample Demo Data
+                  </button>
+                )}
+
+                <button type="button" className={styles.btnSm} onClick={loadData}>
+                  <Icon name="refresh" size={14} /> Retry live connection
+                </button>
+              </div>
             </div>
           )}
 
