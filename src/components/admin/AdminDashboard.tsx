@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
-import { PRODUCTS } from "@/lib/catalog";
+import { PRODUCTS, type Product } from "@/lib/catalog";
 import { ENQUIRY_STATUSES, exportCsv, formatDate } from "@/lib/admin-utils";
 import type { EnquiryStatus, OrderStatus } from "@/lib/admin-utils";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { DEMO_ORDERS, DEMO_QUOTES, DEMO_SUBSCRIBERS } from "@/lib/mock-admin-data";
 import {
+  deleteProductFromFirestore,
   getEnquiriesFromFirestore,
   getInventoryFromFirestore,
   getNewsletterSubscriptions,
   getOrdersFromFirestore,
+  getProductsFromFirestore,
   saveInventoryToFirestore,
+  saveProductToFirestore,
+  seedCatalogToFirestore,
   updateEnquiryStatus,
   updateOrderStatus,
   type EnquiryRecord,
@@ -30,6 +34,7 @@ import { MediaView } from "./views/MediaView";
 import { OrdersView } from "./views/OrdersView";
 import type { OrderFilter } from "./views/OrdersView";
 import { OverviewView } from "./views/OverviewView";
+import { ProductsView } from "./views/ProductsView";
 import { QuotesView } from "./views/QuotesView";
 import { TABS } from "./views/types";
 import type { StockSummary, Tab } from "./views/types";
@@ -53,7 +58,8 @@ const NAV: { heading: string; items: { tab: Tab; label: string; icon: IconName }
   {
     heading: "Catalogue",
     items: [
-      { tab: "inventory", label: "Inventory", icon: "inventory" },
+      { tab: "products", label: "Products", icon: "inventory" },
+      { tab: "inventory", label: "Inventory", icon: "table" },
       { tab: "media", label: "Media", icon: "media" },
     ],
   },
@@ -64,6 +70,7 @@ const TITLES: Record<Tab, string> = {
   overview: "Overview",
   orders: "Orders",
   quotes: "Quotes & messages",
+  products: "Products & catalogue",
   inventory: "Inventory",
   media: "Media",
   customers: "Customers",
@@ -87,6 +94,10 @@ service cloud.firestore {
             'vertexhand@gmail.com'
           ]
         );
+    }
+    match /products/{slug} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /orders/{orderId} {
       allow create: if true;
@@ -119,6 +130,7 @@ export function AdminDashboard() {
   const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]);
   const [inventory, setInventory] = useState<InventoryRecord[]>([]);
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -166,8 +178,14 @@ export function AdminDashboard() {
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError("");
-    const results = await Promise.allSettled([getOrdersFromFirestore(), getEnquiriesFromFirestore(), getNewsletterSubscriptions(), getInventoryFromFirestore()]);
-    const [ordersRes, enquiriesRes, subscribersRes, inventoryRes] = results;
+    const results = await Promise.allSettled([
+      getOrdersFromFirestore(),
+      getEnquiriesFromFirestore(),
+      getNewsletterSubscriptions(),
+      getInventoryFromFirestore(),
+      getProductsFromFirestore(),
+    ]);
+    const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes] = results;
     const failed: string[] = [];
     const reason = (r: PromiseRejectedResult) => (r.reason as { code?: string; message?: string })?.code || (r.reason as Error)?.message || "error";
 
@@ -179,6 +197,7 @@ export function AdminDashboard() {
     else failed.push(`subscribers (${reason(subscribersRes)})`);
     if (inventoryRes.status === "fulfilled") setInventory(inventoryRes.value);
     else failed.push(`inventory (${reason(inventoryRes)})`);
+    if (productsRes.status === "fulfilled" && productsRes.value.length > 0) setProducts(productsRes.value);
 
     if (failed.length) {
       setLoadError(`Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account is an approved admin.`);
@@ -199,8 +218,8 @@ export function AdminDashboard() {
 
   const stock = useMemo<StockSummary>(() => {
     const bySlug = new Map(inventory.map((i) => [i.slug, i]));
-    const s: StockSummary = { tracked: 0, total: PRODUCTS.length, out: 0, low: 0, healthy: 0 };
-    for (const p of PRODUCTS) {
+    const s: StockSummary = { tracked: 0, total: products.length, out: 0, low: 0, healthy: 0 };
+    for (const p of products) {
       const h = stockHealth(bySlug.get(p.slug));
       if (h !== "untracked") s.tracked += 1;
       if (h === "out") s.out += 1;
@@ -208,10 +227,72 @@ export function AdminDashboard() {
       else if (h === "healthy") s.healthy += 1;
     }
     return s;
-  }, [inventory]);
+  }, [inventory, products]);
   const stockAlerts = stock.out + stock.low;
 
-  /* ---------- Mutations ---------- */
+  /* ---------- Product Mutations ---------- */
+  async function handleSaveProduct(p: Product) {
+    try {
+      await saveProductToFirestore(p);
+      setProducts((prev) => [...prev.filter((x) => x.slug !== p.slug), p]);
+      if (p.available !== undefined || p.lowStockAt !== undefined || p.image) {
+        setInventory((prev) => [
+          ...prev.filter((i) => i.slug !== p.slug),
+          {
+            slug: p.slug,
+            available: p.available ?? 0,
+            lowStockAt: p.lowStockAt ?? 10,
+            imageUrl: p.image,
+          },
+        ]);
+      }
+      notify("success", `Product "${p.name}" saved to Firestore.`);
+    } catch (err) {
+      notify("error", "Couldn’t save product. Check permissions.");
+      throw err;
+    }
+  }
+
+  async function handleDeleteProduct(slug: string) {
+    try {
+      await deleteProductFromFirestore(slug);
+      setProducts((prev) => prev.filter((p) => p.slug !== slug));
+      setInventory((prev) => prev.filter((i) => i.slug !== slug));
+      notify("success", "Product deleted.");
+    } catch (err) {
+      notify("error", "Couldn’t delete product. Check permissions.");
+      throw err;
+    }
+  }
+
+  async function handleSeedCatalog() {
+    try {
+      await seedCatalogToFirestore();
+      await loadData();
+      notify("success", "Catalogue successfully synchronized to Firestore.");
+    } catch (err) {
+      notify("error", "Failed to sync catalogue. Check permissions.");
+      throw err;
+    }
+  }
+
+  const exportProducts = () =>
+    exportCsv(
+      "otpb-products",
+      products.map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        category: p.category,
+        price_bdt: p.price ?? "On request",
+        variants_count: p.variants?.length ?? 0,
+        available_stock: p.available ?? "untracked",
+        low_stock_threshold: p.lowStockAt ?? 10,
+        has_photo: p.image ? "Yes" : "No",
+        tags: p.tags.join("; "),
+      }))
+    );
+
+  /* ---------- Order & Enquiry Mutations ---------- */
   async function changeOrderStatus(id: string, status: OrderStatus) {
     const previous = orders;
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
@@ -496,7 +577,18 @@ export function AdminDashboard() {
             />
           )}
           {tab === "quotes" && <QuotesView enquiries={enquiries} loading={loading} onStatusChange={changeEnquiryStatus} onExport={exportQuotes} />}
-          {tab === "inventory" && <InventoryView inventory={inventory} onSave={saveStock} onExport={exportInventory} notify={notify} />}
+          {tab === "products" && (
+            <ProductsView
+              products={products}
+              loading={loading}
+              onSave={handleSaveProduct}
+              onDelete={handleDeleteProduct}
+              onSeed={handleSeedCatalog}
+              onExport={exportProducts}
+              notify={notify}
+            />
+          )}
+          {tab === "inventory" && <InventoryView products={products} inventory={inventory} onSave={saveStock} onExport={exportInventory} notify={notify} />}
           {tab === "customers" && (
             <CustomersView
               orders={orders}

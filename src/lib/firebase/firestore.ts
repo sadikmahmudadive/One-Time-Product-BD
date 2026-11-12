@@ -10,9 +10,11 @@ import {
   limit,
   updateDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   type DocumentData,
 } from "firebase/firestore";
+import { PRODUCTS, type Product } from "@/lib/catalog";
 import { db, isFirebaseConfigured } from "./config";
 
 function requireDb() {
@@ -126,6 +128,146 @@ export async function saveInventoryToFirestore(
     data.imageUrl = imageUrl;
   }
   await setDoc(doc(requireDb(), "inventory", slug), data, { merge: true });
+}
+
+/** Fetch all catalogue products from Firestore, merged with inventory data. */
+export async function getProductsFromFirestore(): Promise<Product[]> {
+  try {
+    const database = requireDb();
+    const [productsSnap, inventorySnap] = await Promise.allSettled([
+      getDocs(collection(database, "products")),
+      getDocs(collection(database, "inventory")),
+    ]);
+
+    const inventoryMap = new Map<string, InventoryRecord>();
+    if (inventorySnap.status === "fulfilled") {
+      inventorySnap.value.docs.forEach((d) => {
+        inventoryMap.set(d.id, { slug: d.id, ...(d.data() as Omit<InventoryRecord, "slug">) });
+      });
+    }
+
+    if (productsSnap.status === "fulfilled" && !productsSnap.value.empty) {
+      return productsSnap.value.docs.map((d) => {
+        const data = d.data() as Product;
+        const inv = inventoryMap.get(d.id);
+        return {
+          ...data,
+          slug: d.id,
+          image: inv?.imageUrl || data.image,
+          available: inv?.available ?? data.available,
+          lowStockAt: inv?.lowStockAt ?? data.lowStockAt,
+        };
+      });
+    }
+
+    // Fallback: Return base PRODUCTS merged with live inventory
+    return PRODUCTS.map((p) => {
+      const inv = inventoryMap.get(p.slug);
+      return {
+        ...p,
+        image: inv?.imageUrl || p.image,
+        available: inv?.available,
+        lowStockAt: inv?.lowStockAt,
+      };
+    });
+  } catch (err) {
+    console.warn("Failed to load products from Firestore, using static catalogue:", err);
+    return PRODUCTS;
+  }
+}
+
+/** Retrieve a single product by slug from Firestore. */
+export async function getProductFromFirestore(slug: string): Promise<Product | null> {
+  try {
+    const database = requireDb();
+    const [docSnap, invSnap] = await Promise.allSettled([
+      getDoc(doc(database, "products", slug)),
+      getDoc(doc(database, "inventory", slug)),
+    ]);
+
+    let base: Product | null = null;
+    if (docSnap.status === "fulfilled" && docSnap.value.exists()) {
+      base = { slug: docSnap.value.id, ...(docSnap.value.data() as Omit<Product, "slug">) };
+    } else {
+      const staticP = PRODUCTS.find((p) => p.slug === slug);
+      if (staticP) base = { ...staticP };
+    }
+
+    if (!base) return null;
+
+    if (invSnap.status === "fulfilled" && invSnap.value.exists()) {
+      const inv = invSnap.value.data() as InventoryRecord;
+      if (inv.imageUrl) base.image = inv.imageUrl;
+      if (inv.available !== undefined) base.available = inv.available;
+      if (inv.lowStockAt !== undefined) base.lowStockAt = inv.lowStockAt;
+    }
+
+    return base;
+  } catch (err) {
+    console.warn("Failed to get product from Firestore:", err);
+    return PRODUCTS.find((p) => p.slug === slug) ?? null;
+  }
+}
+
+/** Save or update a product document in Firestore. */
+export async function saveProductToFirestore(product: Product): Promise<void> {
+  const database = requireDb();
+  const slug = product.slug.trim().toLowerCase();
+  const docRef = doc(database, "products", slug);
+
+  const data: Record<string, unknown> = {
+    slug,
+    name: product.name,
+    category: product.category,
+    kind: product.kind,
+    summary: product.summary || "",
+    price: product.price ?? null,
+    tags: product.tags || [],
+    specs: product.specs || [],
+    updatedAt: serverTimestamp(),
+  };
+
+  if (product.image) data.image = product.image;
+  if (product.capacityMl !== undefined) data.capacityMl = product.capacityMl;
+  if (product.variants && product.variants.length > 0) data.variants = product.variants;
+
+  await setDoc(docRef, data, { merge: true });
+
+  if (product.available !== undefined || product.lowStockAt !== undefined || product.image) {
+    await saveInventoryToFirestore(
+      slug,
+      product.available ?? 0,
+      product.lowStockAt ?? 10,
+      product.image
+    );
+  }
+}
+
+/** Delete a product from Firestore. */
+export async function deleteProductFromFirestore(slug: string): Promise<void> {
+  const database = requireDb();
+  await Promise.allSettled([
+    deleteDoc(doc(database, "products", slug)),
+    deleteDoc(doc(database, "inventory", slug)),
+  ]);
+}
+
+/** Seed all initial catalogue items into Firestore */
+export async function seedCatalogToFirestore(): Promise<number> {
+  const database = requireDb();
+  let count = 0;
+  for (const product of PRODUCTS) {
+    await setDoc(
+      doc(database, "products", product.slug),
+      {
+        ...product,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    count++;
+  }
+  return count;
 }
 
 /** Save email subscriber to Firestore */

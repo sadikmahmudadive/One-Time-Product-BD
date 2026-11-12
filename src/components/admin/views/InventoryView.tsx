@@ -22,18 +22,22 @@ export function stockHealth(record: InventoryRecord | undefined): Health {
 }
 
 interface InventoryViewProps {
+  products?: Product[];
   inventory: InventoryRecord[];
   onSave: (slug: string, available: number, lowStockAt: number, imageUrl?: string) => Promise<void>;
   onExport: () => void;
   notify: (tone: "success" | "error", text: string) => void;
 }
 
-export function InventoryView({ inventory, onSave, onExport, notify }: InventoryViewProps) {
+export function InventoryView({ products = PRODUCTS, inventory, onSave, onExport, notify }: InventoryViewProps) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StockFilter>("all");
 
   const byslug = useMemo(() => new Map(inventory.map((i) => [i.slug, i])), [inventory]);
-  const rows = PRODUCTS.map((p) => ({ product: p, record: byslug.get(p.slug), health: stockHealth(byslug.get(p.slug)) }));
+  const rows = useMemo(
+    () => products.map((p) => ({ product: p, record: byslug.get(p.slug), health: stockHealth(byslug.get(p.slug)) })),
+    [products, byslug]
+  );
 
   const count = (h: Health[]) => rows.filter((r) => h.includes(r.health)).length;
   const q = search.trim().toLowerCase();

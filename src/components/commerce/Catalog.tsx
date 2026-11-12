@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
-import { CATEGORIES, PRODUCTS, hasVariants, isDirectBuy, lowestPrice, packSummary, priceLabel } from "@/lib/catalog";
+import { CATEGORIES, hasVariants, isDirectBuy, lowestPrice, packSummary, priceLabel } from "@/lib/catalog";
 import type { CategoryId, Product } from "@/lib/catalog";
+import { useProducts } from "@/lib/products-context";
 import { ProductCard } from "./ProductCard";
 import styles from "./Catalog.module.css";
 
@@ -20,6 +21,7 @@ function cardAction(p: Product) {
 }
 
 export function Catalog({ category }: { category?: CategoryId }) {
+  const { products, loading } = useProducts();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -29,7 +31,7 @@ export function Catalog({ category }: { category?: CategoryId }) {
     if (window.location.hash === "#search") searchRef.current?.focus();
   }, []);
 
-  const inCategory = useMemo(() => (category ? PRODUCTS.filter((p) => p.category === category) : PRODUCTS), [category]);
+  const inCategory = useMemo(() => (category ? products.filter((p) => p.category === category) : products), [category, products]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -57,11 +59,11 @@ export function Catalog({ category }: { category?: CategoryId }) {
     <div className={`wrap ${styles.wrap}`}>
       <nav aria-label="Product categories" className={styles.tabs}>
         <Link href="/shop" className={styles.tab} aria-current={!category ? "page" : undefined}>
-          All products <span>{PRODUCTS.length}</span>
+          All products <span>{products.length}</span>
         </Link>
         {CATEGORIES.map((c) => (
           <Link key={c.id} href={`/shop/${c.id}`} className={styles.tab} aria-current={category === c.id ? "page" : undefined}>
-            {c.short} <span>{PRODUCTS.filter((p) => p.category === c.id).length}</span>
+            {c.short} <span>{products.filter((p) => p.category === c.id).length}</span>
           </Link>
         ))}
       </nav>

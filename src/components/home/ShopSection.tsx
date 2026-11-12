@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { PackSelector } from "@/components/commerce/PackSelector";
 import { ProductCard } from "@/components/commerce/ProductCard";
-import { hasVariants, priceLabel, withTag } from "@/lib/catalog";
+import { hasVariants, priceLabel } from "@/lib/catalog";
+import { useProducts } from "@/lib/products-context";
 import styles from "./ShopSection.module.css";
 
 type Tab = "new" | "popular";
@@ -13,9 +14,10 @@ type Tab = "new" | "popular";
 const DELAYS = ["", "d2", "d3", "d4"];
 
 export function ShopSection() {
+  const { products } = useProducts();
   const [tab, setTab] = useState<Tab>("new");
   const [packs, setPacks] = useState<Record<string, string>>({});
-  const items = withTag(tab);
+  const items = useMemo(() => products.filter((p) => p.tags.includes(tab)), [products, tab]);
 
   return (
     <section id="shop" className={`section ${styles.section}`}>

@@ -6,11 +6,26 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && 
         ('email' in request.auth.token) &&
-        request.auth.token.email.lower() in [
-          'onetimeproductbd@gmail.com',
-          'siradive137@gmail.com',
-          'vertexhand@gmail.com'
-        ];
+        (
+          request.auth.token.email.lower() in [
+            'onetimeproductbd@gmail.com',
+            'siradive137@gmail.com',
+            'vertexhand@gmail.com'
+          ] ||
+          request.auth.token.email in [
+            'onetimeproductbd@gmail.com',
+            'siradive137@gmail.com',
+            'vertexhand@gmail.com'
+          ]
+        );
+    }
+
+    // Products Collection (Storefront & Operations)
+    match /products/{slug} {
+      // Anyone can read products to view the storefront catalogue
+      allow read: if true;
+      // Only admins can add, update, or delete catalogue products
+      allow write: if isAdmin();
     }
 
     // Orders Collection

@@ -10,18 +10,20 @@ import { ProductShape } from "@/components/ui/ProductShape";
 import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import { PRODUCTS, getCategory, getProduct, hasVariants, isDirectBuy, packSummary, priceLabel } from "@/lib/catalog";
 import type { Product } from "@/lib/catalog";
+import { getProductFromFirestore, getProductsFromFirestore } from "@/lib/firebase/firestore";
 import styles from "./page.module.css";
 
 type Params = { slug: string };
 
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export function generateStaticParams() {
   return PRODUCTS.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
-  const product = getProduct((await params).slug);
+  const { slug } = await params;
+  const product = (await getProductFromFirestore(slug)) || getProduct(slug);
   if (!product) return {};
   return { title: `${product.name} — One Time Product BD`, description: product.summary };
 }
@@ -48,15 +50,23 @@ function structuredData(p: Product, category: string) {
 const REASSURANCE = ["Retail packs and bulk quantities", "Pack sizes and prices shown up front", "Need a different size? Ask for a quote"];
 
 export default async function ProductPage({ params }: { params: Promise<Params> }) {
-  const product = getProduct((await params).slug);
+  const { slug } = await params;
+  const product = (await getProductFromFirestore(slug)) || getProduct(slug);
   if (!product) notFound();
-  const category = getCategory(product.category)!;
-  const material = product.specs.find(([label]) => label.toLowerCase() === "material")?.[1];
+  const category = getCategory(product.category) || {
+    id: product.category,
+    name: product.category.replace("-", " "),
+    short: product.category,
+    description: "",
+    kind: product.kind,
+  };
+  const material = product.specs?.find(([label]) => label.toLowerCase() === "material")?.[1];
 
+  const allProducts = await getProductsFromFirestore();
   // Same category first, topped up from the rest so the row is never thin.
   const related = [
-    ...PRODUCTS.filter((p) => p.category === product.category && p.slug !== product.slug),
-    ...PRODUCTS.filter((p) => p.category !== product.category),
+    ...allProducts.filter((p) => p.category === product.category && p.slug !== product.slug),
+    ...allProducts.filter((p) => p.category !== product.category && p.slug !== product.slug),
   ].slice(0, 4);
 
   return (

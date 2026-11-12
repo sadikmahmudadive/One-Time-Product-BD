@@ -71,6 +71,9 @@ export interface Product {
   variants?: Variant[];
   tags: ("new" | "popular")[];
   specs: [label: string, value: string][];
+  /** Warehouse stock counts & alert levels. */
+  available?: number;
+  lowStockAt?: number;
 }
 
 const pack = (slug: string, pieces: string, price: number | null): Variant => ({

@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { getProduct, hasVariants } from "@/lib/catalog";
+import type { Product } from "@/lib/catalog";
+import { useProducts } from "@/lib/products-context";
 
 export interface CartLine {
   /** Product slug + variant id — one line per distinct choice. */
@@ -42,8 +44,8 @@ const STORAGE_KEY = "otpb-cart-v1";
 const TOAST_MS = 2600;
 const MAX_QTY = 9999;
 
-function resolve(line: CartLine): ResolvedLine | null {
-  const product = getProduct(line.slug);
+function resolve(line: CartLine, findProduct: (slug: string) => Product | undefined): ResolvedLine | null {
+  const product = findProduct(line.slug) ?? getProduct(line.slug);
   if (!product) return null;
   if (line.variantId && hasVariants(product)) {
     const v = product.variants.find((x) => x.id === line.variantId);
@@ -54,6 +56,7 @@ function resolve(line: CartLine): ResolvedLine | null {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { getProduct: getLiveProduct } = useProducts();
   const [raw, setRaw] = useState<CartLine[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -96,7 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const addItem = useCallback((slug: string, variantId?: string, qty = 1) => {
-    const product = getProduct(slug);
+    const product = getLiveProduct(slug) ?? getProduct(slug);
     if (!product) return;
     const key = variantId ?? slug;
     setRaw((lines) => {
@@ -108,7 +111,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     clearTimeout(timer.current);
     setToast(v ? `${product.name} — pack of ${v.pieces}` : product.name);
     timer.current = setTimeout(() => setToast(null), TOAST_MS);
-  }, []);
+  }, [getLiveProduct]);
 
   const setQty = useCallback((key: string, qty: number) => {
     const next = Math.max(1, Math.min(MAX_QTY, Math.floor(qty) || 1));
@@ -119,7 +122,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setRaw([]), []);
 
   const value = useMemo<CartContextValue>(() => {
-    const lines = raw.map(resolve).filter((l): l is ResolvedLine => l !== null);
+    const lines = raw.map((l) => resolve(l, getLiveProduct)).filter((l): l is ResolvedLine => l !== null);
     return {
       ready: hydrated,
       count: lines.reduce((n, l) => n + l.qty, 0),
@@ -132,7 +135,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem,
       clear,
     };
-  }, [raw, hydrated, toast, addItem, setQty, removeItem, clear]);
+  }, [raw, hydrated, toast, addItem, setQty, removeItem, clear, getLiveProduct]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

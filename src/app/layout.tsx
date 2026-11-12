@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, Inter, Noto_Sans_Bengali } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { AuthProvider } from "@/lib/firebase/auth-context";
+import { ProductsProvider } from "@/lib/products-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -48,7 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <style>{`.loader{display:none}.w,.fade-in,.chip-pop{opacity:1}`}</style>
         </noscript>
         <AuthProvider>
-          <CartProvider>{children}</CartProvider>
+          <ProductsProvider>
+            <CartProvider>{children}</CartProvider>
+          </ProductsProvider>
         </AuthProvider>
       </body>
     </html>
