@@ -73,6 +73,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          <Link href="/track-order">Track your order</Link>
           <Link href="/quote">Request a bulk quote</Link>
         </nav>
       )}

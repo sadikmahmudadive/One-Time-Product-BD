@@ -32,9 +32,10 @@ service cloud.firestore {
     match /orders/{orderId} {
       // Anyone can create an order from storefront checkout
       allow create: if true;
-      // Admins can read, update status, and manage all orders
-      // Authenticated customers can read their own orders
-      allow read, update, delete: if isAdmin() || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
+      // Anyone with an exact order ID can look up that single order for tracking
+      allow get: if true;
+      // Listing all orders or modifying orders is restricted to admins and the owning customer
+      allow list, update, delete: if isAdmin() || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
     }
 
     // Enquiries / Quotes Collection

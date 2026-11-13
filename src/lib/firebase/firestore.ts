@@ -370,10 +370,35 @@ export async function saveOrderToFirestore(order: Omit<OrderRecord, "id" | "crea
 
 /** Retrieve an order by document ID */
 export async function getOrderFromFirestore(orderId: string): Promise<OrderRecord | null> {
+  const cleanId = orderId.trim();
+  if (!cleanId) return null;
   const database = requireDb();
-  const docSnap = await getDoc(doc(database, "orders", orderId));
+  const docSnap = await getDoc(doc(database, "orders", cleanId));
   if (!docSnap.exists()) return null;
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrderRecord, "id">) };
+}
+
+/** Retrieve all orders belonging to a specific signed-in customer. */
+export async function getUserOrdersFromFirestore(userId: string): Promise<OrderRecord[]> {
+  if (!userId) return [];
+  const database = requireDb();
+  const col = collection(database, "orders");
+  try {
+    const q = query(col, where("userId", "==", userId), orderBy("createdAt", "desc"), limit(50));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderRecord, "id">) }));
+  } catch (err) {
+    console.warn("Retrying getUserOrders without orderBy:", err);
+    const fallbackQ = query(col, where("userId", "==", userId), limit(50));
+    const snapshot = await getDocs(fallbackQ);
+    const list = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderRecord, "id">) }));
+    // Sort client-side newest first
+    return list.sort((a, b) => {
+      const ta = (a.createdAt as { toDate?: () => Date })?.toDate?.()?.getTime() ?? 0;
+      const tb = (b.createdAt as { toDate?: () => Date })?.toDate?.()?.getTime() ?? 0;
+      return tb - ta;
+    });
+  }
 }
 
 /** Fetch the most recent orders for the operations dashboard. */

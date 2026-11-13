@@ -37,6 +37,14 @@ export function CheckoutForm() {
         totalPrice: subtotal,
         status: "pending",
       });
+      try {
+        const key = "otpb_recent_orders";
+        const prev = JSON.parse(localStorage.getItem(key) || "[]") as { id: string; date: string; total: number }[];
+        const next = [{ id: orderId, date: new Date().toISOString(), total: subtotal }, ...prev.filter((o) => o.id !== orderId)].slice(0, 5);
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        // Ignore storage restrictions
+      }
       clear();
       router.push(`/order-confirmation?order=${encodeURIComponent(orderId)}`);
     } catch {

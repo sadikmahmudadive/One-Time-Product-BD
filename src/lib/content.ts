@@ -221,6 +221,7 @@ export const FOOTER_LINKS = {
   Company: [
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
+    { href: "/track-order", label: "Track order" },
     { href: "/quote", label: "Bulk quote" },
     { href: "/faq", label: "FAQs" },
   ],

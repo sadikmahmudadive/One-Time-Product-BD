@@ -101,7 +101,8 @@ service cloud.firestore {
     }
     match /orders/{orderId} {
       allow create: if true;
-      allow read, update, delete: if isAdmin() || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
+      allow get: if true;
+      allow list, update, delete: if isAdmin() || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
     }
     match /enquiries/{enquiryId} {
       allow create: if true;

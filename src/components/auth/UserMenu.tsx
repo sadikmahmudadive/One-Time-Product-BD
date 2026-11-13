@@ -92,6 +92,14 @@ export function UserMenu() {
             My Cart
           </Link>
           <Link
+            href="/track-order"
+            className={styles.item}
+            role="menuitem"
+            onClick={() => setDropdownOpen(false)}
+          >
+            Track Order
+          </Link>
+          <Link
             href="/quote"
             className={styles.item}
             role="menuitem"
