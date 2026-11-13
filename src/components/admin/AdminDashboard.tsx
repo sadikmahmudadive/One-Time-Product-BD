@@ -137,6 +137,7 @@ export function AdminDashboard() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [copiedRules, setCopiedRules] = useState(false);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
   const [slipOrder, setSlipOrder] = useState<OrderRecord | null>(null);
@@ -144,6 +145,8 @@ export function AdminDashboard() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const mainRef = useRef<HTMLElement>(null);
   const toastId = useRef(0);
+  const isFetchingRef = useRef(false);
+  const lastSyncMsRef = useRef(0);
 
   /* ---------- Navigation (kept in the URL hash so refresh and links land on the same section) ---------- */
   const setTab = useCallback((next: Tab) => {
@@ -176,42 +179,84 @@ export function AdminDashboard() {
   }, []);
 
   /* ---------- Data ---------- */
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setLoadError("");
-    const results = await Promise.allSettled([
-      getOrdersFromFirestore(),
-      getEnquiriesFromFirestore(),
-      getNewsletterSubscriptions(),
-      getInventoryFromFirestore(),
-      getProductsFromFirestore(),
-    ]);
-    const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes] = results;
-    const failed: string[] = [];
-    const reason = (r: PromiseRejectedResult) => (r.reason as { code?: string; message?: string })?.code || (r.reason as Error)?.message || "error";
-
-    if (ordersRes.status === "fulfilled") setOrders(ordersRes.value);
-    else failed.push(`orders (${reason(ordersRes)})`);
-    if (enquiriesRes.status === "fulfilled") setEnquiries(enquiriesRes.value);
-    else failed.push(`quotes (${reason(enquiriesRes)})`);
-    if (subscribersRes.status === "fulfilled") setSubscribers(subscribersRes.value);
-    else failed.push(`subscribers (${reason(subscribersRes)})`);
-    if (inventoryRes.status === "fulfilled") setInventory(inventoryRes.value);
-    else failed.push(`inventory (${reason(inventoryRes)})`);
-    if (productsRes.status === "fulfilled" && productsRes.value.length > 0) setProducts(productsRes.value);
-
-    if (failed.length) {
-      setLoadError(`Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account is an approved admin.`);
-    } else {
-      setIsDemoMode(false);
+  const loadData = useCallback(async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (!silent) {
+      setLoading(true);
+      setLoadError("");
     }
-    setSyncedAt(new Date());
-    setLoading(false);
+    try {
+      const results = await Promise.allSettled([
+        getOrdersFromFirestore(),
+        getEnquiriesFromFirestore(),
+        getNewsletterSubscriptions(),
+        getInventoryFromFirestore(),
+        getProductsFromFirestore(),
+      ]);
+      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes] = results;
+      const failed: string[] = [];
+      const reason = (r: PromiseRejectedResult) =>
+        (r.reason as { code?: string; message?: string })?.code || (r.reason as Error)?.message || "error";
+
+      if (ordersRes.status === "fulfilled") setOrders(ordersRes.value);
+      else failed.push(`orders (${reason(ordersRes)})`);
+      if (enquiriesRes.status === "fulfilled") setEnquiries(enquiriesRes.value);
+      else failed.push(`quotes (${reason(enquiriesRes)})`);
+      if (subscribersRes.status === "fulfilled") setSubscribers(subscribersRes.value);
+      else failed.push(`subscribers (${reason(subscribersRes)})`);
+      if (inventoryRes.status === "fulfilled") setInventory(inventoryRes.value);
+      else failed.push(`inventory (${reason(inventoryRes)})`);
+      if (productsRes.status === "fulfilled" && productsRes.value.length > 0) setProducts(productsRes.value);
+
+      if (failed.length) {
+        if (!silent) {
+          setLoadError(
+            `Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account is an approved admin.`
+          );
+        }
+      } else {
+        setLoadError("");
+        setIsDemoMode(false);
+      }
+      const now = new Date();
+      lastSyncMsRef.current = now.getTime();
+      setSyncedAt(now);
+    } finally {
+      isFetchingRef.current = false;
+      if (!silent) setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData(false);
   }, [loadData]);
+
+  useEffect(() => {
+    if (!autoRefresh || isDemoMode) return;
+    const AUTO_REFRESH_MS = 30_000;
+    const REFRESH_ON_FOCUS_MIN_AGE_MS = 10_000;
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastSyncMsRef.current >= REFRESH_ON_FOCUS_MIN_AGE_MS) {
+        void loadData(true);
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void loadData(true);
+      }
+    }, AUTO_REFRESH_MS);
+
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [autoRefresh, isDemoMode, loadData]);
 
   /* ---------- Derived ---------- */
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
@@ -477,8 +522,24 @@ export function AdminDashboard() {
           </div>
           <div className={styles.topActions}>
             {isDemoMode && <span className={styles.demoBadge}>Demo Preview Mode</span>}
-            {syncedAt && !isDemoMode && <span className={styles.synced}>Updated {syncedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>}
-            <button type="button" className={styles.btn} onClick={loadData} disabled={loading}>
+            {!isDemoMode && (
+              <button
+                type="button"
+                className={`${styles.liveToggle} ${autoRefresh ? styles.liveToggleOn : ""}`}
+                onClick={() => setAutoRefresh((v) => !v)}
+                aria-pressed={autoRefresh}
+                title={autoRefresh ? "Auto-refreshing every 30s (click to pause)" : "Auto-refresh paused (click to resume)"}
+              >
+                <span className={styles.liveDot} aria-hidden="true" />
+                {autoRefresh ? "Live · 30s" : "Auto paused"}
+              </button>
+            )}
+            {syncedAt && !isDemoMode && (
+              <span className={styles.synced}>
+                Updated {syncedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </span>
+            )}
+            <button type="button" className={styles.btn} onClick={() => void loadData(false)} disabled={loading}>
               <span className={loading ? styles.spin : undefined}>
                 <Icon name="refresh" size={16} />
               </span>
@@ -557,7 +618,7 @@ export function AdminDashboard() {
                   </button>
                 )}
 
-                <button type="button" className={styles.btnSm} onClick={loadData}>
+                <button type="button" className={styles.btnSm} onClick={() => void loadData(false)}>
                   <Icon name="refresh" size={14} /> Retry live connection
                 </button>
               </div>
