@@ -273,6 +273,9 @@ export function StatCard({
   delta,
   deltaLabel,
   icon,
+  badge,
+  active,
+  onClick,
 }: {
   label: string;
   value: string;
@@ -281,11 +284,24 @@ export function StatCard({
   delta?: number | null;
   deltaLabel?: string;
   icon: IconName;
+  badge?: string;
+  active?: boolean;
+  onClick?: () => void;
 }) {
+  const isClickable = Boolean(onClick);
+  const Tag = isClickable ? "button" : "article";
+
   return (
-    <article className={styles.stat}>
+    <Tag
+      className={`${styles.stat} ${isClickable ? styles.statInteractive : ""} ${active ? styles.statInteractiveActive : ""}`}
+      onClick={onClick}
+      type={isClickable ? "button" : undefined}
+    >
       <div className={styles.statTop}>
-        <span className={styles.statLabel}>{label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span className={styles.statLabel}>{label}</span>
+          {badge && <span className={styles.statPill}>{badge}</span>}
+        </div>
         <span className={styles.statIcon}>
           <Icon name={icon} size={18} />
         </span>
@@ -294,7 +310,7 @@ export function StatCard({
       <p className={styles.statFoot}>
         {delta !== undefined &&
           (delta === null ? (
-            <span className={styles.deltaNone}>No earlier period to compare</span>
+            <span className={styles.deltaNone}>No earlier period</span>
           ) : (
             <span className={`${styles.delta} ${delta >= 0 ? styles.deltaUp : styles.deltaDown}`}>
               <Icon name={delta >= 0 ? "up" : "down"} size={13} />
@@ -305,7 +321,7 @@ export function StatCard({
         {delta !== undefined && delta !== null && deltaLabel && <span className={styles.deltaLabel}>{deltaLabel}</span>}
         {hint}
       </p>
-    </article>
+    </Tag>
   );
 }
 

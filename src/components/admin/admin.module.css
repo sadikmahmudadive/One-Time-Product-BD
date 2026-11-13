@@ -652,6 +652,36 @@
   border: 1px solid var(--a-line);
   border-radius: 16px;
   background: var(--a-card);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.statInteractive {
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.statInteractive:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-700, #1f5f3e);
+  box-shadow: 0 6px 20px rgba(10, 31, 24, 0.08);
+}
+.statInteractiveActive {
+  border-color: var(--brand-950, #102d25);
+  box-shadow: 0 0 0 2px var(--accent-500, #b7d957), 0 8px 24px rgba(10, 31, 24, 0.12);
+  background: #ffffff;
+}
+
+.statPill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--brand-100, #e2ece5);
+  color: var(--brand-800, #16462d);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 .statTop {
   display: flex;
