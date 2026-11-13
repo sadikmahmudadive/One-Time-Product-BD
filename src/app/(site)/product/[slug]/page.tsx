@@ -16,6 +16,7 @@ import styles from "./page.module.css";
 
 type Params = { slug: string };
 
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 export function generateStaticParams() {
@@ -112,7 +113,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
           </ul>
           <p className={styles.summary}>{product.summary}</p>
 
-          <ProductPurchase slug={product.slug} />
+          <ProductPurchase slug={product.slug} initialProduct={product} />
 
           <ul className={styles.reassure}>
             {REASSURANCE.map((t) => (

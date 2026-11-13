@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
-import { getProduct, hasVariants, priceLabel } from "@/lib/catalog";
+import { getProduct, hasVariants, priceLabel, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { useProducts } from "@/lib/products-context";
 import { QuantityStepper } from "./QuantityStepper";
 import styles from "./ProductPurchase.module.css";
 
@@ -12,9 +13,10 @@ import styles from "./ProductPurchase.module.css";
 const BAR_HEIGHT = 76;
 
 /** Price, pack picker, quantity and the buy / quote actions for one product. */
-export function ProductPurchase({ slug }: { slug: string }) {
-  const product = getProduct(slug)!;
-  const variants = hasVariants(product) ? product.variants : null;
+export function ProductPurchase({ slug, initialProduct }: { slug: string; initialProduct?: Product }) {
+  const { getProduct: getLiveProduct } = useProducts();
+  const product = getLiveProduct(slug) ?? initialProduct ?? getProduct(slug);
+  const variants = product && hasVariants(product) ? product.variants : null;
   const [variantId, setVariantId] = useState<string | undefined>(undefined);
   const [qty, setQty] = useState(1);
   const [barVisible, setBarVisible] = useState(false);
@@ -22,8 +24,8 @@ export function ProductPurchase({ slug }: { slug: string }) {
 
   const variant = variants?.find((v) => v.id === variantId);
   const needsChoice = !!variants && !variant;
-  const unit = variant ? variant.price : product.price;
-  const quoteHref = `/quote?product=${product.slug}${variant ? `&pack=${variant.pieces}` : ""}`;
+  const unit = variant ? variant.price : product?.price ?? null;
+  const quoteHref = `/quote?product=${product?.slug ?? slug}${variant ? `&pack=${variant.pieces}` : ""}`;
 
   // Show the sticky bar (small screens only, via CSS) once the main buy row has scrolled above the viewport.
   // Reads the live position on scroll rather than using IntersectionObserver, which can skip big jumps.
@@ -62,6 +64,8 @@ export function ProductPurchase({ slug }: { slug: string }) {
         Add to cart
       </AddToCartButton>
     );
+
+  if (!product) return null;
 
   return (
     <div className={styles.root}>

@@ -154,13 +154,14 @@ function serializeProductForFirestore(p: Product): Record<string, unknown> {
   if (primaryImage) data.image = primaryImage;
   if (images.length > 0) data.images = images;
   if (p.capacityMl !== undefined && p.capacityMl !== null) data.capacityMl = p.capacityMl;
-  if (p.variants && p.variants.length > 0) {
-    data.variants = p.variants.map((v) => ({
-      id: v.id,
-      pieces: v.pieces,
-      price: v.price ?? null,
-    }));
-  }
+  data.variants =
+    p.variants && p.variants.length > 0
+      ? p.variants.map((v) => ({
+          id: v.id,
+          pieces: v.pieces,
+          price: v.price ?? null,
+        }))
+      : [];
   if (p.available !== undefined && p.available !== null) data.available = p.available;
   if (p.lowStockAt !== undefined && p.lowStockAt !== null) data.lowStockAt = p.lowStockAt;
 
