@@ -1,4 +1,5 @@
 import { BulkSection } from "@/components/home/BulkSection";
+import { CategoryBento } from "@/components/home/CategoryBento";
 import { CtaBand } from "@/components/home/CtaBand";
 import { Hero } from "@/components/home/Hero";
 import { MadeForSection } from "@/components/home/MadeForSection";
@@ -18,12 +19,13 @@ export default function HomePage() {
       <ChapterIndex />
       <Hero />
       <TrustStrip />
+      <CategoryBento />
+      <ShopSection />
       <Marquee />
       <RangeSection />
       <MadeForSection />
       <SizesSection />
       <SignatureSection />
-      <ShopSection />
       <BulkSection />
       <CtaBand />
     </>

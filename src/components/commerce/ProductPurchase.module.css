@@ -5,8 +5,11 @@
 }
 
 .priceBlock {
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--line-200);
+  padding: 20px 22px;
+  border-radius: 20px;
+  background: var(--surface-50);
+  border: 1px solid var(--line-200);
+  box-shadow: var(--shadow-card);
 }
 
 .price {

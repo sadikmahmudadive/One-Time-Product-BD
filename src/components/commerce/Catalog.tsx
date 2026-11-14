@@ -188,6 +188,11 @@ export function Catalog({ category }: { category?: CategoryId }) {
                 <ProductCard
                   name={p.name}
                   kind={p.kind}
+                  categoryLabel={
+                    lang === "bn"
+                      ? CAT_BN[p.category] ?? p.category
+                      : CATEGORIES.find((c) => c.id === p.category)?.short ?? p.category
+                  }
                   image={p.image}
                   href={href}
                   badge={badge}

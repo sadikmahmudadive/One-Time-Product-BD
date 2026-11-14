@@ -1,27 +1,29 @@
 .card {
   background: var(--surface-0);
   border: 1px solid var(--line-200);
-  border-radius: 20px;
+  border-radius: 22px;
   padding: 12px;
   height: 100%;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-card);
   transition:
-    translate 0.5s var(--ease-out),
-    box-shadow 0.5s,
-    border-color 0.5s;
+    translate 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out),
+    border-color 0.4s var(--ease-out);
 }
 .card:hover {
-  translate: 0 -8px;
-  box-shadow: 0 18px 48px rgba(16, 45, 37, 0.1);
-  border-color: var(--line-300);
+  translate: 0 -6px;
+  box-shadow: var(--shadow-floating);
+  border-color: rgba(40, 99, 77, 0.28);
 }
 
 .media {
   display: block;
   position: relative;
-  background: var(--surface-100);
-  border-radius: 14px;
+  background: radial-gradient(circle at 50% 42%, #ffffff 0%, var(--surface-100) 92%);
+  border: 1px solid var(--line-200);
+  border-radius: 16px;
   padding: 18px;
   aspect-ratio: 4 / 3;
   overflow: hidden;
@@ -32,18 +34,24 @@
   right: 10px;
   bottom: 10px;
   z-index: 2;
-  padding: 6px 11px;
+  padding: 7px 13px;
   border-radius: 999px;
   border: 1px solid rgba(16, 45, 37, 0.14);
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--brand-950);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
-  box-shadow: 0 4px 12px rgba(16, 45, 37, 0.12);
+  transform: translateY(6px);
+  transition:
+    opacity 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out),
+    background-color 0.2s ease,
+    color 0.2s ease;
+  box-shadow: 0 6px 16px rgba(16, 45, 37, 0.14);
 }
 
 .card:hover .quickBtn,
@@ -53,7 +61,9 @@
 }
 
 .quickBtn:hover {
-  background: var(--accent-500);
+  background: var(--brand-950);
+  border-color: var(--brand-950);
+  color: #fff;
 }
 
 @media (hover: none) {
@@ -65,13 +75,16 @@
 
 .badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 10px;
+  left: 10px;
   z-index: 1;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(16, 45, 37, 0.08);
 }
 
 .badgeNew {
@@ -80,7 +93,8 @@
 }
 
 .badgeStock {
-  background: var(--brand-100);
+  background: rgba(231, 241, 235, 0.92);
+  border: 1px solid rgba(25, 135, 84, 0.18);
   color: var(--success-700);
   display: inline-flex;
   align-items: center;
@@ -88,7 +102,8 @@
 }
 
 .badgeLow {
-  background: #fef3c7;
+  background: rgba(254, 243, 199, 0.94);
+  border: 1px solid rgba(180, 83, 9, 0.2);
   color: #b45309;
   display: inline-flex;
   align-items: center;
@@ -121,8 +136,17 @@
   padding: 16px 8px 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
+}
+
+.categoryLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--brand-700);
+  margin: 0 0 -4px;
 }
 
 .name {

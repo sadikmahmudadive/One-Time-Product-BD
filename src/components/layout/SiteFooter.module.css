@@ -8,6 +8,12 @@
   padding-bottom: 32px;
 }
 
+@media (max-width: 767px) {
+  .inner {
+    padding-bottom: 96px;
+  }
+}
+
 .top {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));

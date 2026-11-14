@@ -6,7 +6,7 @@ import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { PackSelector } from "@/components/commerce/PackSelector";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { QuickViewModal } from "@/components/commerce/QuickViewModal";
-import { hasVariants, priceLabel, type Product } from "@/lib/catalog";
+import { CATEGORIES, hasVariants, priceLabel, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
@@ -16,9 +16,16 @@ type Tab = "new" | "popular";
 
 const DELAYS = ["", "d2", "d3", "d4"];
 
+const CAT_BN: Record<string, string> = {
+  square: "স্কয়ার বক্স",
+  round: "রাউন্ড বক্স",
+  "dessert-cups": "ডেজার্ট কাপ",
+  crates: "ক্রেট",
+};
+
 export function ShopSection() {
   const { products } = useProducts();
-  const { pick } = useLanguage();
+  const { lang, pick } = useLanguage();
   const [tab, setTab] = useState<Tab>("new");
   const [packs, setPacks] = useState<Record<string, string>>({});
   const [quickProduct, setQuickProduct] = useState<Product | null>(null);
@@ -30,7 +37,7 @@ export function ShopSection() {
         <div className={`reveal section-head ${styles.head}`}>
           <div>
             <p className="eyebrow" style={{ color: "var(--brand-700)" }}>
-              {pick("06 — Shop", "০৬ — শপ")}
+              {pick("Featured shop", "জনপ্রিয় শপ")}
             </p>
             <h2 className="section-title" style={{ maxWidth: "none" }}>
               {pick("Fresh in,", "নতুন সংযোজন,")}{" "}
@@ -83,6 +90,11 @@ export function ShopSection() {
                 <ProductCard
                   name={p.name}
                   kind={p.kind}
+                  categoryLabel={
+                    lang === "bn"
+                      ? CAT_BN[p.category] ?? p.category
+                      : CATEGORIES.find((c) => c.id === p.category)?.short ?? p.category
+                  }
                   image={p.image}
                   href={href}
                   badge={tab === "new" ? "new" : "in-stock"}

@@ -10,6 +10,8 @@ import styles from "./ProductCard.module.css";
 interface ProductCardProps {
   name: string;
   kind: ShapeKind;
+  /** Optional short category eyebrow label above the title. */
+  categoryLabel?: string;
   /** Cloudinary public ID or image URL */
   image?: string;
   /** Product page the image and title lead to. */
@@ -33,6 +35,7 @@ interface ProductCardProps {
 export function ProductCard({
   name,
   kind,
+  categoryLabel,
   image,
   href,
   badge,
@@ -83,6 +86,7 @@ export function ProductCard({
         )}
       </div>
       <div className={styles.body}>
+        {categoryLabel && <span className={styles.categoryLabel}>{categoryLabel}</span>}
         <h3 className={styles.name}>
           <Link href={href} className={styles.nameLink}>
             {name}
