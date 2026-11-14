@@ -1,4 +1,79 @@
 .page { padding-top: clamp(32px, 5vw, 64px); padding-bottom: clamp(72px, 9vw, 128px); }
+.stepsBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  background: var(--surface-0);
+  border: 1px solid var(--line-200);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-600);
+}
+.stepActive {
+  color: var(--brand-950);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.stepActive::before {
+  content: "1";
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  color: var(--brand-950);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+.stepItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.stepNum {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-100);
+  color: var(--ink-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.summaryItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.summaryThumb {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--surface-100);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--line-200);
+}
+.summaryThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
 .layout { display:grid; gap:28px; align-items:start; }
 @media (min-width: 920px) { .layout { grid-template-columns:minmax(0, 1fr) 360px; } }
 .formCard,.summary,.empty { border:1px solid var(--line-200); background:var(--surface-0); border-radius:var(--radius-panel); padding:clamp(22px,4vw,40px); }

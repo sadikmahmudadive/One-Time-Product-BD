@@ -73,6 +73,36 @@
   font-variant-numeric: tabular-nums;
 }
 
+.filterPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.filterPill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-200);
+  background: var(--surface-0);
+  color: var(--ink-700);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.filterPill:hover {
+  border-color: var(--brand-700);
+  color: var(--ink-950);
+}
+
+.filterPillActive {
+  background: var(--brand-100);
+  border-color: var(--brand-700);
+  color: var(--brand-950);
+}
+
 .grid {
   list-style: none;
   margin: 0;

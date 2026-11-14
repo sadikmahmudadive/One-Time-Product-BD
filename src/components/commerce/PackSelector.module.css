@@ -12,14 +12,14 @@
 }
 
 .pill {
-  min-height: 44px;
-  min-width: 54px;
-  padding: 0 14px;
+  min-height: 36px;
+  min-width: 48px;
+  padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid var(--ink-500);
+  border: 1px solid var(--line-300);
   background: var(--surface-0);
   color: var(--ink-950);
-  font: 600 14px var(--font-inter), system-ui, sans-serif;
+  font: 600 13px var(--font-inter), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition:

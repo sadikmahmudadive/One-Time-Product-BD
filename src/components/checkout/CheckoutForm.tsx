@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
+import { ProductShape } from "@/components/ui/ProductShape";
+import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n/context";
@@ -79,7 +81,15 @@ export function CheckoutForm() {
     }
   }
 
-  return <div className={`wrap ${styles.page}`}><form className={styles.layout} onSubmit={onSubmit}>
+  return <div className={`wrap ${styles.page}`}>
+    <div className={styles.stepsBar} aria-label="Checkout progress">
+      <span className={styles.stepActive}>{pick("Delivery details", "ডেলিভারি তথ্য")}</span>
+      <span aria-hidden="true">→</span>
+      <span className={styles.stepItem}><span className={styles.stepNum}>2</span>{pick("Phone confirmation", "ফোনে নিশ্চিতকরণ")}</span>
+      <span aria-hidden="true">→</span>
+      <span className={styles.stepItem}><span className={styles.stepNum}>3</span>{pick("Dispatch & track order", "ডিসপ্যাচ ও ট্র্যাকিং")}</span>
+    </div>
+    <form className={styles.layout} onSubmit={onSubmit}>
     <section className={styles.formCard} aria-labelledby="customer-h">
       <p className="eyebrow">{pick("Secure order request", "নিরাপদ অর্ডার অনুরোধ")}</p><h2 id="customer-h">{t.checkout.customerDetails}</h2>
       <p className={styles.lede}>{pick("We will confirm delivery charge and payment instructions before processing your order.", "অর্ডার প্রক্রিয়াকরণের আগে আমরা ডেলিভারি চার্জ ও পেমেন্ট নির্দেশনা জানিয়ে দেবো।")}</p>
@@ -94,6 +104,31 @@ export function CheckoutForm() {
       {status === "error" && <p className={styles.error} role="alert">{pick("We couldn’t place the order. Please check your connection and try again.", "অর্ডার সম্পন্ন করা যায়নি। অনুগ্রহ করে ইন্টারনেট সংযোগ যাচাই করে আবার চেষ্টা করুন।")}</p>}
       <button className="btn btn-primary" disabled={status === "sending"}>{status === "sending" ? t.checkout.placingOrder : t.checkout.placeOrder}</button>
     </section>
-    <aside className={styles.summary}><h2>{t.checkout.orderSummary}</h2><ul>{lines.map((line) => <li key={line.key}><span><b>{line.qty} ×</b> {line.name}{line.variantLabel && <small>{line.variantLabel}</small>}</span><strong>{formatPrice((line.unitPrice ?? 0) * line.qty)}</strong></li>)}</ul><div className={styles.total}><span>{t.cart.subtotal}</span><strong>{formatPrice(subtotal)}</strong></div><p>{t.cart.note}</p></aside>
+    <aside className={styles.summary}>
+      <h2>{t.checkout.orderSummary}</h2>
+      <ul>
+        {lines.map((line) => (
+          <li key={line.key}>
+            <span className={styles.summaryItemLeft}>
+              <span className={styles.summaryThumb}>
+                {line.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={buildCloudinaryUrl(line.image, { width: 88, height: 88, crop: "fill" })} alt={line.name} />
+                ) : (
+                  <ProductShape kind={line.kind} />
+                )}
+              </span>
+              <span>
+                <b>{line.qty} ×</b> {line.name}
+                {line.variantLabel && <small>{line.variantLabel}</small>}
+              </span>
+            </span>
+            <strong>{formatPrice((line.unitPrice ?? 0) * line.qty)}</strong>
+          </li>
+        ))}
+      </ul>
+      <div className={styles.total}><span>{t.cart.subtotal}</span><strong>{formatPrice(subtotal)}</strong></div>
+      <p>{t.cart.note}</p>
+    </aside>
   </form></div>;
 }

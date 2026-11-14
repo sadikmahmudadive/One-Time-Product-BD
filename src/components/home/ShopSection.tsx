@@ -7,6 +7,7 @@ import { PackSelector } from "@/components/commerce/PackSelector";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { QuickViewModal } from "@/components/commerce/QuickViewModal";
 import { hasVariants, priceLabel, type Product } from "@/lib/catalog";
+import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
 import styles from "./ShopSection.module.css";
@@ -85,8 +86,20 @@ export function ShopSection() {
                   image={p.image}
                   href={href}
                   badge={tab === "new" ? "new" : "in-stock"}
-                  price={priceLabel(p)}
-                  unit={variants ? pick("by pack size", "প্যাক অনুযায়ী") : undefined}
+                  price={
+                    chosen
+                      ? chosen.price !== null
+                        ? formatPrice(chosen.price)
+                        : pick("Price on request", "আলোচনা সাপেক্ষে")
+                      : priceLabel(p)
+                  }
+                  unit={
+                    chosen
+                      ? `${pick("for pack of", "প্যাক:")} ${chosen.pieces}`
+                      : variants
+                      ? pick("by pack size", "প্যাক অনুযায়ী")
+                      : undefined
+                  }
                   onQuickView={() => setQuickProduct(p)}
                   variants={
                     variants && (

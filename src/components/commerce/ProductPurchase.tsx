@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { useCart } from "@/components/cart/CartProvider";
 import { getProduct, hasVariants, priceLabel, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n/context";
@@ -13,8 +15,19 @@ import styles from "./ProductPurchase.module.css";
 /** Height of the mobile buy bar; the toast lifts by this much while the bar is showing. */
 const BAR_HEIGHT = 76;
 
+function perPieceLabel(pieces: string, price: number | null, suffix: string): string | null {
+  if (price === null) return null;
+  const m = pieces.match(/\d+/);
+  if (!m) return null;
+  const count = Number(m[0]);
+  if (!Number.isFinite(count) || count <= 1) return null;
+  return `${formatPrice(price / count)} ${suffix}`;
+}
+
 /** Price, pack picker, quantity and the buy / quote actions for one product. */
 export function ProductPurchase({ slug, initialProduct }: { slug: string; initialProduct?: Product }) {
+  const router = useRouter();
+  const { addItem } = useCart();
   const { getProduct: getLiveProduct } = useProducts();
   const { t, pick } = useLanguage();
   const product = getLiveProduct(slug) ?? initialProduct ?? getProduct(slug);
@@ -99,22 +112,50 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
             {t.product.packSizeLegend} <span>{t.product.packRequired}</span>
           </legend>
           <div className={styles.packGrid}>
-            {variants.map((v) => (
-              <label key={v.id} className={styles.pack}>
-                <input className={styles.radio} type="radio" name="pack" value={v.id} checked={variantId === v.id} onChange={() => setVariantId(v.id)} />
-                <span className={styles.packBody}>
-                  <span className={styles.packQty}>{v.pieces}</span>
-                  <span className={styles.packPrice}>{v.price === null ? pick("On request", "আলোচনা সাপেক্ষে") : formatPrice(v.price)}</span>
-                </span>
-              </label>
-            ))}
+            {variants.map((v) => {
+              const perPc = perPieceLabel(v.pieces, v.price, pick("/ pc", "/ পিস"));
+              return (
+                <label key={v.id} className={styles.pack}>
+                  <input className={styles.radio} type="radio" name="pack" value={v.id} checked={variantId === v.id} onChange={() => setVariantId(v.id)} />
+                  <span className={styles.packBody}>
+                    <span className={styles.packQty}>{v.pieces}</span>
+                    <span className={styles.packPrice}>{v.price === null ? pick("On request", "আলোচনা সাপেক্ষে") : formatPrice(v.price)}</span>
+                    {perPc && <span className={styles.packPerUnit}>{perPc}</span>}
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </fieldset>
       )}
 
       <div ref={buyRef} className={styles.buyRow}>
         <QuantityStepper value={qty} onChange={setQty} label={product.name} />
-        {action(styles.add)}
+        <div className={styles.buyButtons}>
+          {action(styles.add)}
+          {!needsChoice && unit !== null && (
+            <button
+              type="button"
+              className={`btn btn-secondary ${styles.buyNowBtn}`}
+              onClick={() => {
+                addItem(slug, variant?.id, qty);
+                router.push("/checkout");
+              }}
+            >
+              {pick("Buy now", "এখনই কিনুন")}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.dispatchBox}>
+        <span className={styles.dispatchDot} aria-hidden="true" />
+        <span>
+          {pick(
+            "Dhaka dispatch within 24–48h · Nationwide delivery across all 64 districts",
+            "ঢাকায় ২৪–৪৮ ঘণ্টায় ডেলিভারি · সারা দেশের ৬৪ জেলায় কুরিয়ার সুবিধা"
+          )}
+        </span>
       </div>
 
       <Link className={styles.quoteLink} href={quoteHref}>

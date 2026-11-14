@@ -93,6 +93,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.packPerUnit {
+  font-size: 11.5px;
+  color: var(--brand-700);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .pack:hover .packBody {
   border-color: var(--brand-700);
 }
@@ -102,7 +109,8 @@
   border-color: var(--brand-900);
   color: #fff;
 }
-.radio:checked + .packBody .packPrice {
+.radio:checked + .packBody .packPrice,
+.radio:checked + .packBody .packPerUnit {
   color: var(--brand-100);
 }
 
@@ -115,11 +123,43 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+}
+
+.buyButtons {
+  flex: 1 1 240px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
 }
 
 .add {
-  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.buyNowBtn {
+  white-space: nowrap;
+}
+
+.dispatchBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-100);
+  border: 1px solid var(--line-200);
+  font-size: 13.5px;
+  color: var(--ink-800);
+  line-height: 1.4;
+}
+
+.dispatchDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex: none;
 }
 
 .quoteLink {

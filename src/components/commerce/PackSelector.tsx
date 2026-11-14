@@ -1,3 +1,6 @@
+"use client";
+
+import { useLanguage } from "@/lib/i18n/context";
 import styles from "./PackSelector.module.css";
 
 interface PackSelectorProps {
@@ -8,9 +11,11 @@ interface PackSelectorProps {
 
 /** Pack-size pills for variable products (pieces per pack). */
 export function PackSelector({ packs, selected, onSelect }: PackSelectorProps) {
+  const { pick } = useLanguage();
+
   return (
     <div>
-      <p className={styles.label}>Pack size (pcs)</p>
+      <p className={styles.label}>{pick("Pack size (pcs)", "প্যাক সাইজ (পিস)")}</p>
       <div className={styles.pills}>
         {packs.map((p) => (
           <button

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
-import { CATEGORIES, hasVariants, lowestPrice, packSummary, priceLabel } from "@/lib/catalog";
+import { CATEGORIES, hasVariants, isDirectBuy, lowestPrice, packSummary, priceLabel } from "@/lib/catalog";
 import type { CategoryId, Product } from "@/lib/catalog";
+import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
 import { PackSelector } from "./PackSelector";
@@ -13,6 +14,7 @@ import { QuickViewModal } from "./QuickViewModal";
 import styles from "./Catalog.module.css";
 
 type Sort = "featured" | "price-asc" | "price-desc";
+type ModeFilter = "all" | "priced" | "packs";
 
 const CAT_BN: Record<string, string> = {
   square: "স্কয়ার বক্স",
@@ -26,6 +28,7 @@ export function Catalog({ category }: { category?: CategoryId }) {
   const { lang, t, pick } = useLanguage();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
+  const [mode, setMode] = useState<ModeFilter>("all");
   const [packs, setPacks] = useState<Record<string, string>>({});
   const [quickProduct, setQuickProduct] = useState<Product | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -39,7 +42,21 @@ export function Catalog({ category }: { category?: CategoryId }) {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q ? inCategory.filter((p) => p.name.toLowerCase().includes(q)) : [...inCategory];
+    let list = q
+      ? inCategory.filter(
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            p.summary.toLowerCase().includes(q) ||
+            p.specs.some(([, v]) => v.toLowerCase().includes(q))
+        )
+      : [...inCategory];
+
+    if (mode === "priced") {
+      list = list.filter((p) => isDirectBuy(p) || (hasVariants(p) && p.variants.some((v) => v.price !== null)));
+    } else if (mode === "packs") {
+      list = list.filter((p) => hasVariants(p));
+    }
+
     if (sort === "featured") return list;
     const dir = sort === "price-asc" ? 1 : -1;
     // Products without a confirmed price always sort last.
@@ -51,12 +68,13 @@ export function Catalog({ category }: { category?: CategoryId }) {
       if (pb === null) return -1;
       return (pa - pb) * dir;
     });
-  }, [inCategory, query, sort]);
+  }, [inCategory, query, sort, mode]);
 
-  const filtered = query.trim() !== "" || sort !== "featured";
+  const filtered = query.trim() !== "" || sort !== "featured" || mode !== "all";
   const clear = () => {
     setQuery("");
     setSort("featured");
+    setMode("all");
   };
 
   return (
@@ -100,6 +118,30 @@ export function Catalog({ category }: { category?: CategoryId }) {
         <p className={styles.count} aria-live="polite">
           {results.length} {pick(results.length === 1 ? "product" : "products", "টি পণ্য")}
         </p>
+      </div>
+
+      <div className={styles.filterPills} role="group" aria-label={pick("Quick filters", "দ্রুত ফিল্টার")}>
+        <button
+          type="button"
+          className={`${styles.filterPill} ${mode === "all" ? styles.filterPillActive : ""}`}
+          onClick={() => setMode("all")}
+        >
+          {t.common.all}
+        </button>
+        <button
+          type="button"
+          className={`${styles.filterPill} ${mode === "priced" ? styles.filterPillActive : ""}`}
+          onClick={() => setMode("priced")}
+        >
+          {pick("Ready to order online", "সরাসরি অর্ডারযোগ্য")}
+        </button>
+        <button
+          type="button"
+          className={`${styles.filterPill} ${mode === "packs" ? styles.filterPillActive : ""}`}
+          onClick={() => setMode("packs")}
+        >
+          {pick("Wholesale pack tiers", "পাইকারি প্যাক টায়ার")}
+        </button>
       </div>
 
       {results.length > 0 ? (
@@ -150,8 +192,20 @@ export function Catalog({ category }: { category?: CategoryId }) {
                   href={href}
                   badge={badge}
                   meta={packSummary(p)}
-                  price={priceLabel(p)}
-                  unit={variants ? pick("by pack size", "প্যাক অনুযায়ী") : undefined}
+                  price={
+                    chosen
+                      ? chosen.price !== null
+                        ? formatPrice(chosen.price)
+                        : t.common.priceOnRequest
+                      : priceLabel(p)
+                  }
+                  unit={
+                    chosen
+                      ? `${pick("for pack of", "প্যাক:")} ${chosen.pieces}`
+                      : variants
+                      ? pick("by pack size", "প্যাক অনুযায়ী")
+                      : undefined
+                  }
                   onQuickView={() => setQuickProduct(p)}
                   variants={
                     variants && (

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import type { ShapeKind } from "@/lib/content";
+import { useLanguage } from "@/lib/i18n/context";
 import styles from "./ProductGallery.module.css";
 
 interface ProductGalleryProps {
@@ -24,6 +25,7 @@ export function ProductGallery({
   categoryShort,
   isNew,
 }: ProductGalleryProps) {
+  const { pick } = useLanguage();
   const [activeIndex, setActiveIndex] = useState(0);
 
   // Keep index within bounds if images change
@@ -65,7 +67,7 @@ export function ProductGallery({
       <div className={styles.stage}>
         {/* Floating tags */}
         <div className={styles.tags}>
-          {isNew && <span className={styles.tagNew}>New</span>}
+          {isNew && <span className={styles.tagNew}>{pick("New", "নতুন")}</span>}
           <Link href={`/shop/${categoryId}`} className={styles.tagCat}>
             {categoryShort}
           </Link>
