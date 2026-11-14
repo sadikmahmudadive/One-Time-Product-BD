@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/lib/i18n/context";
 import { useCart } from "./CartProvider";
 
 interface AddToCartButtonProps {
@@ -17,12 +18,13 @@ export function AddToCartButton({
   qty = 1,
   className = "btn btn-primary",
   disabled,
-  children = "Add to cart",
+  children,
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
+  const { t } = useLanguage();
   return (
     <button type="button" className={className} disabled={disabled} onClick={() => addItem(slug, variantId, qty)}>
-      {children}
+      {children ?? t.common.addToCart}
     </button>
   );
 }

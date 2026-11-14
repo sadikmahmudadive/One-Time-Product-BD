@@ -18,6 +18,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html[lang="bn"] body {
+  font-family: var(--font-bengali), var(--font-inter), system-ui, sans-serif;
+}
+
 a {
   color: var(--brand-700);
 }

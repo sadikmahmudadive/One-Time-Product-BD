@@ -1,9 +1,12 @@
+"use client";
+
 import { Fragment } from "react";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { ArrowRightIcon } from "@/components/ui/Icons";
+import { useLanguage } from "@/lib/i18n/context";
 import styles from "./Hero.module.css";
 
-const HEADLINE: { word: string; delay: number; accent?: boolean }[] = [
+const HEADLINE_EN: { word: string; delay: number; accent?: boolean }[] = [
   { word: "Packaging", delay: 0.1 },
   { word: "that", delay: 0.18 },
   { word: "lets", delay: 0.26 },
@@ -14,19 +17,32 @@ const HEADLINE: { word: string; delay: number; accent?: boolean }[] = [
   { word: "talking.", delay: 0.7, accent: true },
 ];
 
-const CHAPTER_LINKS = [
-  { n: "02", label: "The range", href: "#range" },
-  { n: "03", label: "Made for your business", href: "#madefor" },
-  { n: "05", label: "Inside the Signature box", href: "#signature" },
+const HEADLINE_BN: { word: string; delay: number; accent?: boolean }[] = [
+  { word: "প্যাকেজিং", delay: 0.1 },
+  { word: "যা", delay: 0.18 },
+  { word: "আপনার", delay: 0.26 },
+  { word: "খাবারের", delay: 0.34 },
+  { word: "মান", delay: 0.42 },
+  { word: "তুলে", delay: 0.54, accent: true },
+  { word: "ধরে।", delay: 0.62, accent: true },
 ];
 
-const FLOATERS = [
-  { kind: "square", caption: "Clear lids.", pos: { left: "2%", top: "4%", width: "26%" }, float: "float-b", delay: 1.2 },
-  { kind: "heart", caption: "Dessert cups.", pos: { right: "2%", top: "8%", width: "24%" }, float: "float-c", delay: 1.35 },
-  { kind: "crate", caption: "Bulk crates.", pos: { right: "8%", bottom: 0, width: "24%" }, float: "float-b", delay: 1.5 },
-] as const;
-
 export function Hero() {
+  const { lang, pick } = useLanguage();
+  const headline = lang === "bn" ? HEADLINE_BN : HEADLINE_EN;
+
+  const chapterLinks = [
+    { n: "02", label: pick("The range", "পণ্যের সম্ভার"), href: "#range" },
+    { n: "03", label: pick("Made for your business", "আপনার ব্যবসার জন্য"), href: "#madefor" },
+    { n: "05", label: pick("Inside the Signature box", "সিগনেচার বক্স"), href: "#signature" },
+  ];
+
+  const floaters = [
+    { kind: "square", caption: pick("Clear lids.", "স্বচ্ছ ঢাকনা।"), pos: { left: "2%", top: "4%", width: "26%" }, float: "float-b", delay: 1.2 },
+    { kind: "heart", caption: pick("Dessert cups.", "ডেজার্ট কাপ।"), pos: { right: "2%", top: "8%", width: "24%" }, float: "float-c", delay: 1.35 },
+    { kind: "crate", caption: pick("Bulk crates.", "বাল্ক ক্রেট।"), pos: { right: "8%", bottom: 0, width: "24%" }, float: "float-b", delay: 1.5 },
+  ] as const;
+
   return (
     <section id="top" aria-label="Introduction" className={`section ${styles.hero}`}>
       <div aria-hidden="true" className={styles.dots} />
@@ -35,11 +51,11 @@ export function Hero() {
       <div className={`wrap ${styles.grid}`}>
         <div className="hero-out">
           <p className="eyebrow fade-in" style={{ color: "var(--accent-500)", animationDelay: "0.05s" }}>
-            01 — The first look
+            {pick("01 — The first look", "০১ — প্রথম ঝলক")}
           </p>
           <h1 className={styles.title}>
-            {HEADLINE.map((h) => (
-              <Fragment key={h.word}>
+            {headline.map((h) => (
+              <Fragment key={`${lang}-${h.word}`}>
                 <span className={`w ${h.accent ? "it" : ""}`} style={{ animationDelay: `${h.delay}s`, color: h.accent ? "var(--accent-500)" : undefined }}>
                   {h.word}
                 </span>{" "}
@@ -47,15 +63,18 @@ export function Hero() {
             ))}
           </h1>
           <p className={`fade-in ${styles.lede}`} style={{ animationDelay: "0.85s" }}>
-            Square boxes, round containers, dessert cups and crates — made for sweet shops, bakeries, caterers and homes across Bangladesh.
+            {pick(
+              "Square boxes, round containers, dessert cups and crates — made for sweet shops, bakeries, caterers and homes across Bangladesh.",
+              "স্কয়ার বক্স, রাউন্ড কনটেইনার, ডেজার্ট কাপ এবং ক্রেট — সারা বাংলাদেশের মিষ্টির দোকান, বেকারি, ক্যাটারিং ও ঘরোয়া ব্যবহারের জন্য।"
+            )}
           </p>
           <div className={`fade-in ${styles.ctas}`} style={{ animationDelay: "1s" }}>
             <a className="btn btn-lime" href="#shop">
-              Order now
+              {pick("Order now", "অর্ডার করুন")}
               <ArrowRightIcon />
             </a>
             <a className="btn btn-ghost" href="#bulk">
-              Request a bulk quote
+              {pick("Request a bulk quote", "বাল্ক কোটেশন চান")}
             </a>
           </div>
         </div>
@@ -71,7 +90,7 @@ export function Hero() {
                 <ProductShape kind="rectBlack" />
               </div>
             </div>
-            {FLOATERS.map((f) => (
+            {floaters.map((f) => (
               <div key={f.kind} className={`${f.float} ${styles.floater}`} style={f.pos}>
                 <div className={styles.card}>
                   <ProductShape kind={f.kind} />
@@ -84,7 +103,7 @@ export function Hero() {
             <div className={`chip-pop ${styles.priceChip}`} style={{ animationDelay: "1.65s" }}>
               <span className={styles.stockDot} />
               <span className={styles.chipText}>
-                Black Premium Box <span className={styles.chipPrice}>· ৳18.00</span>
+                {pick("Black Premium Box", "ব্ল্যাক প্রিমিয়াম বক্স")} <span className={styles.chipPrice}>· ৳18.00</span>
               </span>
             </div>
           </div>
@@ -93,7 +112,7 @@ export function Hero() {
 
       <div className={`wrap fade-in ${styles.chapters}`} style={{ animationDelay: "1.2s" }}>
         <div className={styles.chapterRow}>
-          {CHAPTER_LINKS.map((c) => (
+          {chapterLinks.map((c) => (
             <a key={c.n} className={styles.chapter} href={c.href}>
               <span className={styles.chapterNum}>{c.n}</span>
               <span className={styles.chapterLabel}>

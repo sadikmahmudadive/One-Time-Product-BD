@@ -4,11 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { useLanguage } from "@/lib/i18n/context";
 import { AuthModal } from "./AuthModal";
 import styles from "./UserMenu.module.css";
 
 export function UserMenu() {
   const { user, loading, logOut } = useAuth();
+  const { t, pick } = useLanguage();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -35,9 +37,9 @@ export function UserMenu() {
           type="button"
           className={styles.signInBtn}
           onClick={() => setModalOpen(true)}
-          aria-label="Sign in or register"
+          aria-label={t.auth.signIn}
         >
-          <span>Sign In</span>
+          <span>{t.auth.signIn}</span>
         </button>
         <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       </div>
@@ -79,7 +81,7 @@ export function UserMenu() {
               onClick={() => setDropdownOpen(false)}
               style={{ color: "var(--brand-700)", fontWeight: 700 }}
             >
-              Admin Dashboard
+              {t.auth.adminDashboard}
             </Link>
           )}
 
@@ -89,7 +91,7 @@ export function UserMenu() {
             role="menuitem"
             onClick={() => setDropdownOpen(false)}
           >
-            My Cart
+            {t.auth.myCart}
           </Link>
           <Link
             href="/track-order"
@@ -97,7 +99,7 @@ export function UserMenu() {
             role="menuitem"
             onClick={() => setDropdownOpen(false)}
           >
-            Track Order
+            {t.auth.trackOrder}
           </Link>
           <Link
             href="/quote"
@@ -105,7 +107,7 @@ export function UserMenu() {
             role="menuitem"
             onClick={() => setDropdownOpen(false)}
           >
-            Request Bulk Quote
+            {t.auth.requestQuote}
           </Link>
           <Link
             href="/contact"
@@ -113,7 +115,7 @@ export function UserMenu() {
             role="menuitem"
             onClick={() => setDropdownOpen(false)}
           >
-            Support / Contact
+            {pick("Support / Contact", "সাপোর্ট / যোগাযোগ")}
           </Link>
 
           <button

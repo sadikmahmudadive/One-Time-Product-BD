@@ -1,25 +1,49 @@
+"use client";
+
 import Link from "next/link";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { SIGNATURE_CALLOUTS, SIGNATURE_SPECS } from "@/lib/content";
+import { useLanguage } from "@/lib/i18n/context";
 import styles from "./SignatureSection.module.css";
 
 const DELAYS = ["", "d2", "d3", "d4"];
 
+const CALLOUTS_BN: Record<string, string> = {
+  "Clear lid": "স্বচ্ছ ঢাকনা",
+  "Rectangular format": "আয়তাকার আকৃতি",
+  "1000 ml capacity": "১০০০ মিলি ধারণক্ষমতা",
+  "Glossy black base": "গ্লসি কালো বেস",
+};
+
+const SPECS_BN = [
+  { sym: "মিলি", val: "১০০০", l1: "ধারণক্ষমতা", l2: "আয়তাকার ফরম্যাট" },
+  { sym: "ঢা", val: "স্বচ্ছ", l1: "ঢাকনা", l2: "ভেতরের খাবার স্পষ্ট দেখায়" },
+  { sym: "বেস", val: "কালো", l1: "বেস", l2: "গ্লসি ফিনিশ" },
+  { sym: "৳", val: "১৮.০০", l1: "মূল্য", l2: "১০০০ মিলি ব্ল্যাক প্রিমিয়াম বক্স" },
+];
+
 export function SignatureSection() {
+  const { lang, pick } = useLanguage();
+
   return (
     <section id="signature" className={`section ${styles.section}`}>
       <div className={`wrap ${styles.inner}`}>
         <div className={`reveal ${styles.head}`}>
           <p className="eyebrow eyebrow-center" style={{ color: "var(--accent-500)" }}>
-            05 — High-end quality
+            {pick("05 — High-end quality", "০৫ — প্রিমিয়াম মান")}
           </p>
           <h2 className="section-title" style={{ maxWidth: "none" }}>
-            The Signature 1000 ml{" "}
+            {pick("The Signature 1000 ml", "সিগনেচার ১০০০ মিলি")}{" "}
             <span className="it" style={{ color: "var(--accent-500)" }}>
-              Black Edition.
+              {pick("Black Edition.", "ব্ল্যাক এডিশন।")}
             </span>
           </h2>
-          <p className={styles.lede}>A rectangular box with a glossy black base and a clear lid. Scroll to take it apart.</p>
+          <p className={styles.lede}>
+            {pick(
+              "A rectangular box with a glossy black base and a clear lid. Scroll to take it apart.",
+              "গ্লসি কালো বেস ও স্বচ্ছ ঢাকনাসহ আয়তাকার বক্স। স্ক্রল করে অংশগুলো দেখুন।"
+            )}
+          </p>
         </div>
 
         <div className={styles.pin} data-sig-pin>
@@ -56,7 +80,7 @@ export function SignatureSection() {
             >
               {c.side === "left" ? (
                 <>
-                  <span>{c.label}</span>
+                  <span>{lang === "bn" ? CALLOUTS_BN[c.label] ?? c.label : c.label}</span>
                   <span className={styles.line} data-sig-line />
                   <span className={styles.dot} />
                 </>
@@ -64,7 +88,7 @@ export function SignatureSection() {
                 <>
                   <span className={styles.dot} />
                   <span className={styles.line} data-sig-line />
-                  <span>{c.label}</span>
+                  <span>{lang === "bn" ? CALLOUTS_BN[c.label] ?? c.label : c.label}</span>
                 </>
               )}
             </div>
@@ -73,25 +97,32 @@ export function SignatureSection() {
         </div>
 
         <div className={styles.specs}>
-          {SIGNATURE_SPECS.map((s, i) => (
-            <div key={s.n} className={`reveal ${DELAYS[i % 4]} ${styles.spec}`}>
-              <div className={styles.specTop}>
-                <span className={styles.sym}>{s.sym}</span>
-                <span className={styles.specN}>{s.n}</span>
+          {SIGNATURE_SPECS.map((s, i) => {
+            const bn = SPECS_BN[i];
+            const sym = lang === "bn" && bn ? bn.sym : s.sym;
+            const val = lang === "bn" && bn ? bn.val : s.val;
+            const l1 = lang === "bn" && bn ? bn.l1 : s.l1;
+            const l2 = lang === "bn" && bn ? bn.l2 : s.l2;
+            return (
+              <div key={s.n} className={`reveal ${DELAYS[i % 4]} ${styles.spec}`}>
+                <div className={styles.specTop}>
+                  <span className={styles.sym}>{sym}</span>
+                  <span className={styles.specN}>{s.n}</span>
+                </div>
+                <p className={styles.val}>{val}</p>
+                <p className={styles.l1}>{l1}</p>
+                <p className={styles.l2}>{l2}</p>
               </div>
-              <p className={styles.val}>{s.val}</p>
-              <p className={styles.l1}>{s.l1}</p>
-              <p className={styles.l2}>{s.l2}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className={`reveal ${styles.actions}`}>
           <AddToCartButton slug="1000-ml-black-premium-box" className="btn btn-lime">
-            Add to cart · ৳18.00
+            {pick("Add to cart · ৳18.00", "কার্টে যোগ করুন · ৳১৮.০০")}
           </AddToCartButton>
           <Link className="btn btn-ghost" href="/shop/square">
-            See all boxes
+            {pick("See all boxes", "সব বক্স দেখুন")}
           </Link>
         </div>
       </div>

@@ -1,51 +1,78 @@
+"use client";
+
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { CONTACT, PLACEHOLDER } from "@/lib/contact";
-import { FOOTER_LINKS } from "@/lib/content";
+import { useLanguage } from "@/lib/i18n/context";
 import { NewsletterForm } from "./NewsletterForm";
 import styles from "./SiteFooter.module.css";
 
 export function SiteFooter() {
+  const { t } = useLanguage();
+
+  const footerGroups = [
+    {
+      heading: t.footer.shopHeading,
+      links: [
+        { href: "/shop", label: t.footer.allProducts },
+        { href: "/shop/square", label: t.footer.squareRect },
+        { href: "/shop/round", label: t.footer.roundContainers },
+        { href: "/shop/dessert-cups", label: t.footer.dessertCups },
+        { href: "/shop/crates", label: t.footer.crates },
+      ],
+    },
+    {
+      heading: t.footer.companyHeading,
+      links: [
+        { href: "/about", label: t.footer.about },
+        { href: "/contact", label: t.footer.contact },
+        { href: "/track-order", label: t.footer.trackOrder },
+        { href: "/quote", label: t.footer.bulkQuote },
+        { href: "/faq", label: t.footer.faqs },
+      ],
+    },
+  ];
+
   return (
     <footer id="footer" className={styles.footer}>
       <div className={`wrap ${styles.inner}`}>
         <div className={styles.top}>
           <div className="reveal">
             <p className="eyebrow" style={{ color: "var(--accent-500)" }}>
-              Stay in the loop
+              {t.footer.eyebrow}
             </p>
             <h2 className={styles.title}>
-              New shapes and sizes,{" "}
+              {t.footer.titleStart}{" "}
               <span className="it" style={{ color: "var(--accent-500)" }}>
-                first.
+                {t.footer.titleAccent}
               </span>
             </h2>
           </div>
           <div className="reveal d2" style={{ alignSelf: "end" }}>
             <NewsletterForm />
             <p className={styles.follow}>
-              Or follow{" "}
+              {t.footer.followPre}{" "}
               <a className={styles.link} href={CONTACT.instagram} style={{ fontWeight: 600, textDecoration: "underline" }}>
                 @_otpb_
               </a>{" "}
-              on Instagram.
+              {t.footer.followPost}
             </p>
           </div>
         </div>
 
         <div className={styles.columns}>
           <div className={styles.brand}>
-            <Link href="/" aria-label="One Time Product BD — home" className={styles.brandLink}>
+            <Link href="/" aria-label={t.nav.homeAria} className={styles.brandLink}>
               <Logo tone="dark" knockout="var(--brand-950)" size={32} />
             </Link>
-            <p>A Bangladesh-based manufacturer and supplier of food-grade plastic packaging.</p>
+            <p>{t.footer.brandDesc}</p>
           </div>
-          {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
-            <nav key={heading} aria-label={heading}>
-              <p className={styles.heading}>{heading}</p>
+          {footerGroups.map((group) => (
+            <nav key={group.heading} aria-label={group.heading}>
+              <p className={styles.heading}>{group.heading}</p>
               <div className={styles.list}>
-                {links.map((l) => (
-                  <Link key={l.label} className={styles.link} href={l.href}>
+                {group.links.map((l) => (
+                  <Link key={l.href} className={styles.link} href={l.href}>
                     {l.label}
                   </Link>
                 ))}
@@ -53,7 +80,7 @@ export function SiteFooter() {
             </nav>
           ))}
           <div>
-            <p className={styles.heading}>Contact</p>
+            <p className={styles.heading}>{t.footer.contactHeading}</p>
             <div className={`${styles.list} ${styles.contact}`}>
               <span>{CONTACT.phone ?? PLACEHOLDER.phone}</span>
               <span>{CONTACT.email ?? PLACEHOLDER.email}</span>
@@ -67,9 +94,9 @@ export function SiteFooter() {
         </p>
 
         <div className={styles.legal}>
-          <span>© 2026 One Time Product BD · Prices in BDT (৳)</span>
+          <span>{t.footer.legal}</span>
           <a className={`${styles.link} ${styles.top2}`} href="#top">
-            Back to the beginning ↑
+            {t.footer.backToTop}
           </a>
         </div>
       </div>

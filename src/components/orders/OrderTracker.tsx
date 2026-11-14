@@ -12,6 +12,7 @@ import {
   type OrderRecord,
 } from "@/lib/firebase/firestore";
 import { formatPrice } from "@/lib/format";
+import { useLanguage } from "@/lib/i18n/context";
 import styles from "./OrderTracker.module.css";
 
 interface RecentDeviceOrder {
@@ -182,8 +183,37 @@ export function OrderTracker() {
     setTimeout(() => setCopiedId(false), 2000);
   }
 
+  const { lang, t, pick } = useLanguage();
+
+  const statusLabels: Record<OrderRecord["status"], string> = {
+    pending: t.track.statusPending,
+    confirmed: t.track.statusConfirmed,
+    shipped: t.track.statusShipped,
+    cancelled: t.track.statusCancelled,
+  };
+
+  const steps = lang === "bn"
+    ? [
+        {
+          key: "pending" as const,
+          title: t.track.statusPending,
+          desc: "আপনার অর্ডার পাওয়া গেছে এবং স্টক ও ডেলিভারি চার্জ যাচাই করা হচ্ছে।",
+        },
+        {
+          key: "confirmed" as const,
+          title: t.track.statusConfirmed,
+          desc: "অর্ডার নিশ্চিত হয়েছে! আমাদের টিম আপনার পণ্য প্যাক করছে।",
+        },
+        {
+          key: "shipped" as const,
+          title: t.track.statusShipped,
+          desc: "আপনার অর্ডার ডেলিভারির জন্য পাঠানো হয়েছে।",
+        },
+      ]
+    : STEPS;
+
   const currentStepIndex = trackedOrder
-    ? STEPS.findIndex((s) => s.key === trackedOrder.status)
+    ? steps.findIndex((s) => s.key === trackedOrder.status)
     : -1;
 
   const waHref =
@@ -197,11 +227,9 @@ export function OrderTracker() {
   return (
     <div className={`wrap ${styles.page}`}>
       <header className={styles.header}>
-        <p className="eyebrow">Customer Portal</p>
-        <h1>Track your order</h1>
-        <p className={styles.lede}>
-          Enter your Order Reference ID to view real-time preparation, confirmation, and dispatch status.
-        </p>
+        <p className="eyebrow">{t.track.eyebrow}</p>
+        <h1>{t.track.title}</h1>
+        <p className={styles.lede}>{t.track.subtitle}</p>
       </header>
 
       {/* Lookup Card */}
@@ -209,13 +237,13 @@ export function OrderTracker() {
         <form className={styles.lookupForm} onSubmit={handleSubmit}>
           <div>
             <label className="lbl" htmlFor="track-order-id">
-              Order Reference ID
+              {t.track.orderIdLabel}
             </label>
             <input
               id="track-order-id"
               className="field"
               type="text"
-              placeholder="Paste your Order ID (e.g. from confirmation)"
+              placeholder={t.track.orderIdPlaceholder}
               value={orderIdInput}
               onChange={(e) => setOrderIdInput(e.target.value)}
               required
@@ -224,26 +252,26 @@ export function OrderTracker() {
 
           <div>
             <label className="lbl" htmlFor="track-phone">
-              Phone Number <small>(optional verification)</small>
+              {t.track.phoneLabel}
             </label>
             <input
               id="track-phone"
               className="field"
               type="tel"
-              placeholder="01XXXXXXXXX"
+              placeholder={t.track.phonePlaceholder}
               value={phoneInput}
               onChange={(e) => setPhoneInput(e.target.value)}
             />
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loadingLookup}>
-            {loadingLookup ? "Searching…" : "Track Order"}
+            {loadingLookup ? t.track.searching : t.track.trackBtn}
           </button>
         </form>
 
         {deviceOrders.length > 0 && (
           <div className={styles.recentChips}>
-            <span>Recent on this device:</span>
+            <span>{t.track.recentOrders}</span>
             {deviceOrders.map((d) => (
               <button
                 key={d.id}
@@ -274,24 +302,24 @@ export function OrderTracker() {
           <div className={styles.resultHead}>
             <div className={styles.refWrap}>
               <div className={styles.refRow}>
-                <span className={styles.refCode}>Order #{trackedOrder.id}</span>
+                <span className={styles.refCode}>{pick("Order", "অর্ডার")} #{trackedOrder.id}</span>
                 {trackedOrder.id && (
                   <button
                     type="button"
                     className={styles.copyBtn}
                     onClick={() => handleCopyRef(trackedOrder.id!)}
                   >
-                    {copiedId ? "Copied!" : "Copy ID"}
+                    {copiedId ? pick("Copied!", "কপি হয়েছে!") : pick("Copy ID", "আইডি কপি")}
                   </button>
                 )}
               </div>
               <span className={styles.orderDate}>
-                Placed {formatDateTime(trackedOrder.createdAt)}
+                {t.track.placedOn} {formatDateTime(trackedOrder.createdAt)}
               </span>
             </div>
 
             <span className={`${styles.statusBadge} ${styles[`status_${trackedOrder.status}`]}`}>
-              {STATUS_LABELS[trackedOrder.status]}
+              {statusLabels[trackedOrder.status]}
             </span>
           </div>
 
@@ -301,15 +329,13 @@ export function OrderTracker() {
               <div className={styles.cancelledBanner} role="status">
                 <span style={{ fontSize: 22 }}>✕</span>
                 <div>
-                  <h3>This order was cancelled</h3>
-                  <p>
-                    If you believe this was a mistake or would like to place a new order, please reach out to our team.
-                  </p>
+                  <h3>{t.track.statusCancelled}</h3>
+                  <p>{t.track.cancelledNote}</p>
                 </div>
               </div>
             ) : (
               <div className={styles.stepper}>
-                {STEPS.map((step, idx) => {
+                {steps.map((step, idx) => {
                   const isDone = idx < currentStepIndex || trackedOrder.status === "shipped";
                   const isActive = idx === currentStepIndex && trackedOrder.status !== "shipped";
                   return (
@@ -334,23 +360,23 @@ export function OrderTracker() {
           {/* Order Info & Items */}
           <div className={styles.detailsGrid}>
             <div className={styles.infoBox}>
-              <h3>Delivery Details</h3>
+              <h3>{t.track.deliveryTitle}</h3>
               <dl className={styles.infoList}>
                 <div>
-                  <dt>Customer</dt>
+                  <dt>{pick("Customer", "গ্রাহক")}</dt>
                   <dd>{trackedOrder.customer.name}</dd>
                 </div>
                 <div>
-                  <dt>Phone</dt>
+                  <dt>{pick("Phone", "ফোন")}</dt>
                   <dd>{trackedOrder.customer.phone}</dd>
                 </div>
                 <div>
-                  <dt>District / City</dt>
+                  <dt>{pick("District / City", "জেলা / শহর")}</dt>
                   <dd>{trackedOrder.customer.district}</dd>
                 </div>
                 {trackedOrder.customer.address && (
                   <div>
-                    <dt>Delivery Address</dt>
+                    <dt>{pick("Delivery Address", "ডেলিভারি ঠিকানা")}</dt>
                     <dd>{trackedOrder.customer.address}</dd>
                   </div>
                 )}
@@ -358,7 +384,7 @@ export function OrderTracker() {
             </div>
 
             <div className={styles.itemsBox}>
-              <h3>Items Ordered</h3>
+              <h3>{t.track.itemsTitle}</h3>
               <ul className={styles.itemsList}>
                 {trackedOrder.items.map((item, idx) => (
                   <li key={`${item.slug}-${idx}`}>
@@ -371,17 +397,17 @@ export function OrderTracker() {
                       )}
                     </div>
                     <span className={styles.itemPrice}>
-                      {item.subtotal !== null ? formatPrice(item.subtotal) : "On request"}
+                      {item.subtotal !== null ? formatPrice(item.subtotal) : pick("On request", "আলোচনা সাপেক্ষে")}
                     </span>
                   </li>
                 ))}
               </ul>
               <div className={styles.totalRow}>
-                <span>Product Subtotal</span>
+                <span>{t.track.totalLabel}</span>
                 <span>
                   {trackedOrder.totalPrice !== null
                     ? formatPrice(trackedOrder.totalPrice)
-                    : "Price on request"}
+                    : t.common.priceOnRequest}
                 </span>
               </div>
             </div>
@@ -389,7 +415,10 @@ export function OrderTracker() {
 
           <div className={styles.resultFoot}>
             <span style={{ fontSize: 13, color: "var(--ink-600)" }}>
-              Delivery charge is confirmed separately based on your district and carton size.
+              {pick(
+                "Delivery charge is confirmed separately based on your district and carton size.",
+                "আপনার জেলা ও কার্টনের আকার অনুযায়ী ডেলিভারি চার্জ আলাদাভাবে নিশ্চিত করা হয়।"
+              )}
             </span>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {waHref ? (
@@ -399,11 +428,11 @@ export function OrderTracker() {
                   rel="noopener noreferrer"
                   className="btn btn-secondary"
                 >
-                  Message on WhatsApp
+                  {pick("Message on WhatsApp", "হোয়াটসঅ্যাপে মেসেজ দিন")}
                 </a>
               ) : (
                 <Link href="/contact" className="btn btn-secondary">
-                  Contact Support
+                  {t.track.needHelp}
                 </Link>
               )}
               <button
@@ -411,7 +440,7 @@ export function OrderTracker() {
                 className="btn btn-ghost"
                 onClick={() => window.print()}
               >
-                Print Summary
+                {t.track.printSummary}
               </button>
             </div>
           </div>
@@ -421,20 +450,21 @@ export function OrderTracker() {
       {/* Signed-in Customer Order History */}
       {user && (
         <section className={styles.historySection} aria-label="Your order history">
-          <h2>Your Order History</h2>
+          <h2>{t.track.yourHistory}</h2>
           <p className={styles.historySub}>
-            Signed in as <strong>{user.email}</strong>. Click any order below to view its live tracking status.
+            {pick("Signed in as", "সাইন ইন করা অ্যাকাউন্ট:")} <strong>{user.email}</strong>.{" "}
+            {pick("Click any order below to view its live tracking status.", "লাইভ ট্র্যাকিং দেখতে নিচের যেকোনো অর্ডারে ক্লিক করুন।")}
           </p>
 
           {loadingHistory ? (
-            <p style={{ color: "var(--ink-500)", fontSize: 14 }}>Loading your orders…</p>
+            <p style={{ color: "var(--ink-500)", fontSize: 14 }}>{t.common.loading}</p>
           ) : myOrders.length === 0 ? (
             <div className={styles.lookupCard} style={{ textAlign: "center", padding: "32px 20px" }}>
               <p style={{ margin: "0 0 12px", color: "var(--ink-600)" }}>
-                You haven’t placed any orders while signed in to this account yet.
+                {t.track.noHistory}
               </p>
               <Link href="/shop" className="btn btn-primary">
-                Browse Catalogue
+                {t.cart.browseShop}
               </Link>
             </div>
           ) : (
@@ -456,19 +486,19 @@ export function OrderTracker() {
                     <div className={styles.historyTop}>
                       <span className={styles.historyId}>#{shortId(ord.id)}</span>
                       <span className={`${styles.statusBadge} ${styles[`status_${ord.status}`]}`} style={{ padding: "3px 10px", fontSize: 11.5 }}>
-                        {STATUS_LABELS[ord.status]}
+                        {statusLabels[ord.status]}
                       </span>
                     </div>
                     <div className={styles.historyMeta}>
                       <div>{formatDateTime(ord.createdAt)}</div>
                       <div>
-                        {ord.items.length} {ord.items.length === 1 ? "item" : "items"} · {ord.customer.district}
+                        {ord.items.length} {pick(ord.items.length === 1 ? "item" : "items", "টি আইটেম")} · {ord.customer.district}
                       </div>
                     </div>
                     <div className={styles.historyBottom}>
-                      <span>Total</span>
+                      <span>{t.checkout.total}</span>
                       <span>
-                        {ord.totalPrice !== null ? formatPrice(ord.totalPrice) : "On request"}
+                        {ord.totalPrice !== null ? formatPrice(ord.totalPrice) : pick("On request", "আলোচনা সাপেক্ষে")}
                       </span>
                     </div>
                   </button>

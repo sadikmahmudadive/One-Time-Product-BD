@@ -6,6 +6,7 @@ import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { PackSelector } from "@/components/commerce/PackSelector";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { hasVariants, priceLabel } from "@/lib/catalog";
+import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
 import styles from "./ShopSection.module.css";
 
@@ -15,6 +16,7 @@ const DELAYS = ["", "d2", "d3", "d4"];
 
 export function ShopSection() {
   const { products } = useProducts();
+  const { pick } = useLanguage();
   const [tab, setTab] = useState<Tab>("new");
   const [packs, setPacks] = useState<Record<string, string>>({});
   const items = useMemo(() => products.filter((p) => p.tags.includes(tab)), [products, tab]);
@@ -25,21 +27,21 @@ export function ShopSection() {
         <div className={`reveal section-head ${styles.head}`}>
           <div>
             <p className="eyebrow" style={{ color: "var(--brand-700)" }}>
-              06 — Shop
+              {pick("06 — Shop", "০৬ — শপ")}
             </p>
             <h2 className="section-title" style={{ maxWidth: "none" }}>
-              Fresh in,{" "}
+              {pick("Fresh in,", "নতুন সংযোজন,")}{" "}
               <span className="it" style={{ color: "var(--brand-700)" }}>
-                and fan favourites.
+                {pick("and fan favourites.", "এবং সবার পছন্দ।")}
               </span>
             </h2>
           </div>
-          <div role="group" aria-label="Product list" className={styles.seg}>
+          <div role="group" aria-label={pick("Product list", "পণ্যের তালিকা")} className={styles.seg}>
             <button type="button" className={`${styles.segBtn} ${tab === "new" ? styles.segOn : ""}`} aria-pressed={tab === "new"} onClick={() => setTab("new")}>
-              New arrivals
+              {pick("New arrivals", "নতুন পণ্য")}
             </button>
             <button type="button" className={`${styles.segBtn} ${tab === "popular" ? styles.segOn : ""}`} aria-pressed={tab === "popular"} onClick={() => setTab("popular")}>
-              Most popular
+              {pick("Most popular", "সবচেয়ে জনপ্রিয়")}
             </button>
           </div>
         </div>
@@ -53,21 +55,21 @@ export function ShopSection() {
             if (variants) {
               action = !chosen ? (
                 <button type="button" className="btn btn-block" disabled>
-                  Choose a pack size
+                  {pick("Choose a pack size", "প্যাক সাইজ বাছুন")}
                 </button>
               ) : chosen.price === null ? (
                 <Link className="btn btn-secondary btn-block" href={`/quote?product=${p.slug}&pack=${chosen.pieces}`}>
-                  Ask for this price
+                  {pick("Ask for this price", "দাম জানুন")}
                 </Link>
               ) : (
                 <AddToCartButton slug={p.slug} variantId={chosen.id} className="btn btn-primary btn-block">
-                  Add pack of {chosen.pieces}
+                  {pick(`Add pack of ${chosen.pieces}`, `${chosen.pieces} প্যাক যোগ করুন`)}
                 </AddToCartButton>
               );
             } else if (p.price === null) {
               action = (
                 <Link className="btn btn-secondary btn-block" href={href}>
-                  View product
+                  {pick("View product", "পণ্য দেখুন")}
                 </Link>
               );
             } else {
@@ -82,7 +84,7 @@ export function ShopSection() {
                   href={href}
                   badge={tab === "new" ? "new" : "in-stock"}
                   price={priceLabel(p)}
-                  unit={variants ? "by pack size" : undefined}
+                  unit={variants ? pick("by pack size", "প্যাক অনুযায়ী") : undefined}
                   variants={
                     variants && (
                       <PackSelector

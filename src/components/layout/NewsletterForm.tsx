@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { saveNewsletterSubscription } from "@/lib/firebase/firestore";
+import { useLanguage } from "@/lib/i18n/context";
 import styles from "./SiteFooter.module.css";
 
 export function NewsletterForm() {
+  const { t, pick } = useLanguage();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -13,7 +15,7 @@ export function NewsletterForm() {
   if (subscribed) {
     return (
       <p role="status" className={styles.thanks}>
-        You&apos;re on the list. Thank you!
+        {t.footer.newsletterThanks}
       </p>
     );
   }
@@ -44,13 +46,13 @@ export function NewsletterForm() {
         id="nl-email"
         type="email"
         autoComplete="email"
-        placeholder="Your email address"
+        placeholder={t.footer.newsletterPlaceholder}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
       <button type="submit" className="btn btn-lime" style={{ minHeight: 52 }} disabled={submitting}>
-        {submitting ? "Joining…" : "Subscribe"}
+        {submitting ? pick("Joining…", "অপেক্ষা করুন…") : t.footer.newsletterButton}
       </button>
     </form>
   );

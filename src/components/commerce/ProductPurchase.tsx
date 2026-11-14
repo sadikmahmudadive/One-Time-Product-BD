@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { getProduct, hasVariants, priceLabel, type Product } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
 import { QuantityStepper } from "./QuantityStepper";
 import styles from "./ProductPurchase.module.css";
@@ -15,6 +16,7 @@ const BAR_HEIGHT = 76;
 /** Price, pack picker, quantity and the buy / quote actions for one product. */
 export function ProductPurchase({ slug, initialProduct }: { slug: string; initialProduct?: Product }) {
   const { getProduct: getLiveProduct } = useProducts();
+  const { t, pick } = useLanguage();
   const product = getLiveProduct(slug) ?? initialProduct ?? getProduct(slug);
   const variants = product && hasVariants(product) ? product.variants : null;
   const [variantId, setVariantId] = useState<string | undefined>(undefined);
@@ -53,15 +55,15 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
   const action = (className: string) =>
     needsChoice ? (
       <a className="btn" href="#pack" aria-disabled="true" onClick={(e) => (e.preventDefault(), document.getElementById("pack")?.scrollIntoView({ behavior: "smooth", block: "center" }))}>
-        Choose a pack size
+        {t.product.choosePackSize}
       </a>
     ) : unit === null ? (
       <Link className={`btn btn-primary ${className}`} href={quoteHref}>
-        Ask for this price
+        {t.product.askForPrice}
       </Link>
     ) : (
       <AddToCartButton slug={slug} variantId={variant?.id} qty={qty} className={`btn btn-primary ${className}`}>
-        Add to cart
+        {t.common.addToCart}
       </AddToCartButton>
     );
 
@@ -73,18 +75,18 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
         {needsChoice ? (
           <>
             <p className={styles.price}>{priceLabel(product)}</p>
-            <p className={styles.basis}>Price per pack — choose a pack size to see its price.</p>
+            <p className={styles.basis}>{t.product.pricePerPackPrompt}</p>
           </>
         ) : unit === null ? (
           <>
-            <p className={styles.price}>Price on request</p>
-            <p className={styles.basis}>We haven’t listed a price for this option yet. Ask us and we’ll confirm it.</p>
+            <p className={styles.price}>{t.common.priceOnRequest}</p>
+            <p className={styles.basis}>{t.product.priceOnRequestDesc}</p>
           </>
         ) : (
           <>
             <p className={styles.price}>{formatPrice(unit)}</p>
             <p className={styles.basis}>
-              {variant ? `For one pack of ${variant.pieces}` : "Price as listed"}
+              {variant ? `${t.product.forOnePackOf} ${variant.pieces}` : t.product.priceAsListed}
               {qty > 1 && ` · ${qty} × ${formatPrice(unit)} = ${formatPrice(unit * qty)}`}
             </p>
           </>
@@ -94,7 +96,7 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
       {variants && (
         <fieldset className={styles.packs} id="pack">
           <legend className={styles.legend}>
-            Pack size <span>(pieces) — required</span>
+            {t.product.packSizeLegend} <span>{t.product.packRequired}</span>
           </legend>
           <div className={styles.packGrid}>
             {variants.map((v) => (
@@ -102,7 +104,7 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
                 <input className={styles.radio} type="radio" name="pack" value={v.id} checked={variantId === v.id} onChange={() => setVariantId(v.id)} />
                 <span className={styles.packBody}>
                   <span className={styles.packQty}>{v.pieces}</span>
-                  <span className={styles.packPrice}>{v.price === null ? "On request" : formatPrice(v.price)}</span>
+                  <span className={styles.packPrice}>{v.price === null ? pick("On request", "আলোচনা সাপেক্ষে") : formatPrice(v.price)}</span>
                 </span>
               </label>
             ))}
@@ -116,7 +118,7 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
       </div>
 
       <Link className={styles.quoteLink} href={quoteHref}>
-        Need a larger quantity? Request a bulk quote <span aria-hidden="true">→</span>
+        {t.product.buyingLarge} {t.product.requestBulkQuote} <span aria-hidden="true">→</span>
       </Link>
 
       {/* Mobile buy bar: price and the primary action stay reachable while reading the details. */}
@@ -124,7 +126,7 @@ export function ProductPurchase({ slug, initialProduct }: { slug: string; initia
         <div className={styles.barInfo}>
           <span className={styles.barName}>{product.name}</span>
           <span className={styles.barPrice}>
-            {needsChoice ? priceLabel(product) : unit === null ? "Price on request" : formatPrice(unit * qty)}
+            {needsChoice ? priceLabel(product) : unit === null ? t.common.priceOnRequest : formatPrice(unit * qty)}
           </span>
         </div>
         <div className={styles.barAction} {...(barVisible ? {} : { inert: true })}>
