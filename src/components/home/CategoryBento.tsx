@@ -41,7 +41,7 @@ export function CategoryBento() {
   const { lang, pick } = useLanguage();
 
   return (
-    <section className={styles.section} aria-labelledby="bento-categories-heading">
+    <section id="categories" className={styles.section} aria-labelledby="bento-categories-heading">
       <div className="wrap">
         <div className={`reveal ${styles.head}`}>
           <div>

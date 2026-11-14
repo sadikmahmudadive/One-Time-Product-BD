@@ -11,16 +11,18 @@ export interface Chapter {
   id: string;
   n: string;
   label: string;
+  labelBn: string;
 }
 
 export const CHAPTERS: Chapter[] = [
-  { id: "top", n: "01", label: "Intro" },
-  { id: "range", n: "02", label: "The range" },
-  { id: "madefor", n: "03", label: "Made for" },
-  { id: "sizes", n: "04", label: "Sizes" },
-  { id: "signature", n: "05", label: "Signature" },
-  { id: "shop", n: "06", label: "Shop" },
-  { id: "bulk", n: "07", label: "Bulk orders" },
+  { id: "top", n: "01", label: "Intro", labelBn: "পরিচিতি" },
+  { id: "categories", n: "02", label: "Categories", labelBn: "ক্যাটাগরি" },
+  { id: "shop", n: "03", label: "Shop", labelBn: "শপ" },
+  { id: "range", n: "04", label: "The range", labelBn: "পণ্যের সম্ভার" },
+  { id: "madefor", n: "05", label: "Made for", labelBn: "যাদের জন্য" },
+  { id: "sizes", n: "06", label: "Sizes", labelBn: "সাইজ" },
+  { id: "signature", n: "07", label: "Signature", labelBn: "সিগনেচার" },
+  { id: "bulk", n: "08", label: "Bulk orders", labelBn: "পাইকারি" },
 ];
 
 export const NAV_LINKS = [
