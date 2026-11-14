@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { UserIcon } from "@/components/ui/Icons";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useLanguage } from "@/lib/i18n/context";
@@ -27,7 +28,7 @@ export function UserMenu() {
   }, []);
 
   if (loading) {
-    return <div style={{ width: 68, height: 32 }} />;
+    return <div style={{ width: 44, height: 44 }} />;
   }
 
   if (!user) {
@@ -38,8 +39,9 @@ export function UserMenu() {
           className={styles.signInBtn}
           onClick={() => setModalOpen(true)}
           aria-label={t.auth.signIn}
+          title={t.auth.signIn}
         >
-          <span>{t.auth.signIn}</span>
+          <UserIcon />
         </button>
         <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       </div>

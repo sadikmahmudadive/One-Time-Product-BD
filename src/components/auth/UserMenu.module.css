@@ -5,31 +5,34 @@
 }
 
 .signInBtn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
   background: transparent;
   color: #ffffff;
-  border: 1px solid rgba(231, 241, 235, 0.35);
-  border-radius: var(--radius-pill);
-  padding: 6px 14px;
-  font: 600 13px/1 var(--font-inter), system-ui, sans-serif;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: background-color 0.2s, border-color 0.2s;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .signInBtn:hover {
-  background: rgba(231, 241, 235, 0.12);
-  border-color: rgba(231, 241, 235, 0.6);
+  background: rgba(231, 241, 235, 0.1);
+  color: #ffffff;
 }
 
 .avatarBtn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
   background: transparent;
-  border: 1px solid rgba(231, 241, 235, 0.3);
-  border-radius: 50%;
-  padding: 2px;
+  border: 1px solid rgba(231, 241, 235, 0.25);
+  border-radius: 999px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: border-color 0.2s, transform 0.2s;
