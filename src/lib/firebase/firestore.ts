@@ -4,6 +4,7 @@ import {
   getDocs,
   getDoc,
   doc,
+  onSnapshot,
   query,
   where,
   orderBy,
@@ -15,6 +16,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { PRODUCTS, type Product } from "@/lib/catalog";
+import { normalizeContact, type StoreContact } from "@/lib/contact";
 import { db, isFirebaseConfigured } from "./config";
 
 function requireDb() {
@@ -418,5 +420,44 @@ export async function getOrdersFromFirestore(max = 100): Promise<OrderRecord[]> 
 /** Advance an order through the fulfilment workflow. */
 export async function updateOrderStatus(id: string, status: OrderRecord["status"]): Promise<void> {
   await updateDoc(doc(requireDb(), "orders", id), { status });
+}
+
+/** Read public business contact settings (`settings/contact`) from Firestore. */
+export async function getStoreContactFromFirestore(): Promise<StoreContact | null> {
+  if (!isFirebaseConfigured || !db) return null;
+  const snap = await getDoc(doc(db, "settings", "contact"));
+  if (!snap.exists()) return null;
+  return normalizeContact(snap.data() as Partial<StoreContact>);
+}
+
+/** Subscribe to real-time updates on `settings/contact` so footer & pages reflect edits immediately. */
+export function subscribeStoreContact(
+  onData: (contact: StoreContact | null) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!isFirebaseConfigured || !db) return () => {};
+  return onSnapshot(
+    doc(db, "settings", "contact"),
+    (snap) => {
+      onData(snap.exists() ? normalizeContact(snap.data() as Partial<StoreContact>) : null);
+    },
+    (err) => {
+      onError?.(err);
+    }
+  );
+}
+
+/** Save business contact settings from the admin panel to Firestore (`settings/contact`). */
+export async function saveStoreContactToFirestore(contact: StoreContact): Promise<StoreContact> {
+  const normalized = normalizeContact(contact);
+  await setDoc(
+    doc(requireDb(), "settings", "contact"),
+    {
+      ...normalized,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+  return normalized;
 }
 

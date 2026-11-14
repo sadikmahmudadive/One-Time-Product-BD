@@ -6,6 +6,8 @@ import { Logo } from "@/components/ui/Logo";
 import { PRODUCTS, type Product } from "@/lib/catalog";
 import { ENQUIRY_STATUSES, exportCsv, formatDate } from "@/lib/admin-utils";
 import type { EnquiryStatus, OrderStatus } from "@/lib/admin-utils";
+import { DEFAULT_CONTACT, type StoreContact } from "@/lib/contact";
+import { useContact } from "@/lib/contact-context";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { DEMO_ORDERS, DEMO_QUOTES, DEMO_SUBSCRIBERS } from "@/lib/mock-admin-data";
 import {
@@ -15,8 +17,10 @@ import {
   getNewsletterSubscriptions,
   getOrdersFromFirestore,
   getProductsFromFirestore,
+  getStoreContactFromFirestore,
   saveInventoryToFirestore,
   saveProductToFirestore,
+  saveStoreContactToFirestore,
   seedCatalogToFirestore,
   updateEnquiryStatus,
   updateOrderStatus,
@@ -36,6 +40,7 @@ import type { OrderFilter } from "./views/OrdersView";
 import { OverviewView } from "./views/OverviewView";
 import { ProductsView } from "./views/ProductsView";
 import { QuotesView } from "./views/QuotesView";
+import { SettingsView } from "./views/SettingsView";
 import { TABS } from "./views/types";
 import type { StockSummary, Tab } from "./views/types";
 import styles from "./admin.module.css";
@@ -64,6 +69,7 @@ const NAV: { heading: string; items: { tab: Tab; label: string; icon: IconName }
     ],
   },
   { heading: "People", items: [{ tab: "customers", label: "Customers", icon: "customers" }] },
+  { heading: "Store", items: [{ tab: "settings", label: "Store & contact", icon: "settings" }] },
 ];
 
 const TITLES: Record<Tab, string> = {
@@ -74,6 +80,7 @@ const TITLES: Record<Tab, string> = {
   inventory: "Inventory",
   media: "Media",
   customers: "Customers",
+  settings: "Store & contact",
 };
 
 const FIRESTORE_RULES_SNIPPET = `rules_version = '2';
@@ -116,6 +123,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }`;
 
@@ -126,12 +137,15 @@ function tabFromHash(): Tab {
 
 export function AdminDashboard() {
   const { user, logOut } = useAuth();
+  const { refresh: refreshGlobalContact } = useContact();
   const [tab, setTabState] = useState<Tab>("overview");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]);
   const [inventory, setInventory] = useState<InventoryRecord[]>([]);
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [storeContact, setStoreContact] = useState<StoreContact>(DEFAULT_CONTACT);
+  const [settingsNeedsRules, setSettingsNeedsRules] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -193,8 +207,9 @@ export function AdminDashboard() {
         getNewsletterSubscriptions(),
         getInventoryFromFirestore(),
         getProductsFromFirestore(),
+        getStoreContactFromFirestore(),
       ]);
-      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes] = results;
+      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes, contactRes] = results;
       const failed: string[] = [];
       const reason = (r: PromiseRejectedResult) =>
         (r.reason as { code?: string; message?: string })?.code || (r.reason as Error)?.message || "error";
@@ -208,6 +223,12 @@ export function AdminDashboard() {
       if (inventoryRes.status === "fulfilled") setInventory(inventoryRes.value);
       else failed.push(`inventory (${reason(inventoryRes)})`);
       if (productsRes.status === "fulfilled" && productsRes.value.length > 0) setProducts(productsRes.value);
+      if (contactRes.status === "fulfilled") {
+        setSettingsNeedsRules(false);
+        if (contactRes.value) setStoreContact(contactRes.value);
+      } else {
+        setSettingsNeedsRules(true);
+      }
 
       if (failed.length) {
         if (!silent) {
@@ -379,6 +400,21 @@ export function AdminDashboard() {
       notify("success", "Inventory saved.");
     } catch (err) {
       notify("error", "Couldn’t save inventory. Check your connection and permissions.");
+      throw err;
+    }
+  }
+
+  async function handleSaveContact(next: StoreContact) {
+    try {
+      const saved = await saveStoreContactToFirestore(next);
+      setStoreContact(saved);
+      setSettingsNeedsRules(false);
+      await refreshGlobalContact();
+      notify("success", "Store contact details saved and updated live.");
+    } catch (err) {
+      if ((err as { code?: string })?.code === "permission-denied") {
+        setSettingsNeedsRules(true);
+      }
       throw err;
     }
   }
@@ -665,6 +701,15 @@ export function AdminDashboard() {
             />
           )}
           {tab === "media" && <MediaView notify={notify} />}
+          {tab === "settings" && (
+            <SettingsView
+              contact={storeContact}
+              loading={loading}
+              needsRules={settingsNeedsRules}
+              onSave={handleSaveContact}
+              notify={notify}
+            />
+          )}
         </main>
       </div>
 

@@ -61,5 +61,11 @@ service cloud.firestore {
       // Only admins can update stock counts, thresholds, and product images
       allow write: if isAdmin();
     }
+
+    // Storefront Settings (Public business contact info, showroom address, social links)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

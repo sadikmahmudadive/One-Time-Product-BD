@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, Inter, Noto_Sans_Bengali } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { ContactProvider } from "@/lib/contact-context";
 import { AuthProvider } from "@/lib/firebase/auth-context";
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ProductsProvider } from "@/lib/products-context";
@@ -51,9 +52,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
         <LanguageProvider>
           <AuthProvider>
-            <ProductsProvider>
-              <CartProvider>{children}</CartProvider>
-            </ProductsProvider>
+            <ContactProvider>
+              <ProductsProvider>
+                <CartProvider>{children}</CartProvider>
+              </ProductsProvider>
+            </ContactProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

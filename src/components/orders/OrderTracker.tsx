@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, shortId, whatsappLink } from "@/lib/admin-utils";
-import { CONTACT } from "@/lib/contact";
+import { useContact } from "@/lib/contact-context";
 import { useAuth } from "@/lib/firebase/auth-context";
 import {
   getOrderFromFirestore,
@@ -58,6 +58,7 @@ export function OrderTracker() {
   const searchParams = useSearchParams();
   const initialOrderParam = searchParams.get("order") || "";
   const { user, loading: authLoading } = useAuth();
+  const { contact } = useContact();
 
   const [orderIdInput, setOrderIdInput] = useState(initialOrderParam);
   const [phoneInput, setPhoneInput] = useState("");
@@ -217,9 +218,9 @@ export function OrderTracker() {
     : -1;
 
   const waHref =
-    CONTACT.whatsapp && trackedOrder?.id
+    contact.whatsapp && trackedOrder?.id
       ? whatsappLink(
-          CONTACT.whatsapp,
+          contact.whatsapp,
           `Hi One Time Product BD, I am checking the status of my order #${trackedOrder.id}.`
         )
       : null;

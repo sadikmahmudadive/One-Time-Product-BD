@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
-import { CONTACT, PLACEHOLDER } from "@/lib/contact";
+import { DEFAULT_CONTACT, PLACEHOLDER } from "@/lib/contact";
+import { useContact } from "@/lib/contact-context";
 import { useLanguage } from "@/lib/i18n/context";
 import { NewsletterForm } from "./NewsletterForm";
 import styles from "./SiteFooter.module.css";
 
 export function SiteFooter() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const { contact } = useContact();
+  const displayAddress = (lang === "bn" && contact.addressBn) || contact.address;
 
   const footerGroups = [
     {
@@ -52,8 +55,14 @@ export function SiteFooter() {
             <NewsletterForm />
             <p className={styles.follow}>
               {t.footer.followPre}{" "}
-              <a className={styles.link} href={CONTACT.instagram} style={{ fontWeight: 600, textDecoration: "underline" }}>
-                @_otpb_
+              <a
+                className={styles.link}
+                href={contact.instagram || DEFAULT_CONTACT.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontWeight: 600, textDecoration: "underline" }}
+              >
+                {contact.instagramHandle || DEFAULT_CONTACT.instagramHandle}
               </a>{" "}
               {t.footer.followPost}
             </p>
@@ -82,9 +91,21 @@ export function SiteFooter() {
           <div>
             <p className={styles.heading}>{t.footer.contactHeading}</p>
             <div className={`${styles.list} ${styles.contact}`}>
-              <span>{CONTACT.phone ?? PLACEHOLDER.phone}</span>
-              <span>{CONTACT.email ?? PLACEHOLDER.email}</span>
-              <span>{CONTACT.address ?? PLACEHOLDER.address}</span>
+              {contact.phone ? (
+                <a className={styles.link} href={`tel:${contact.phone.replace(/\s+/g, "")}`}>
+                  {contact.phone}
+                </a>
+              ) : (
+                <span>{PLACEHOLDER.phone}</span>
+              )}
+              {contact.email ? (
+                <a className={styles.link} href={`mailto:${contact.email}`}>
+                  {contact.email}
+                </a>
+              ) : (
+                <span>{PLACEHOLDER.email}</span>
+              )}
+              <span>{displayAddress ?? PLACEHOLDER.address}</span>
             </div>
           </div>
         </div>
