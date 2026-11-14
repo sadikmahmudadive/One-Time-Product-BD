@@ -7,6 +7,7 @@ import { RangeSection } from "@/components/home/RangeSection";
 import { ShopSection } from "@/components/home/ShopSection";
 import { SignatureSection } from "@/components/home/SignatureSection";
 import { SizesSection } from "@/components/home/SizesSection";
+import { TrustStrip } from "@/components/home/TrustStrip";
 import { ChapterIndex } from "@/components/layout/ChapterIndex";
 import { IntroLoader } from "@/components/layout/IntroLoader";
 
@@ -16,6 +17,7 @@ export default function HomePage() {
       <IntroLoader />
       <ChapterIndex />
       <Hero />
+      <TrustStrip />
       <Marquee />
       <RangeSection />
       <MadeForSection />

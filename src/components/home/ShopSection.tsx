@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { PackSelector } from "@/components/commerce/PackSelector";
 import { ProductCard } from "@/components/commerce/ProductCard";
-import { hasVariants, priceLabel } from "@/lib/catalog";
+import { QuickViewModal } from "@/components/commerce/QuickViewModal";
+import { hasVariants, priceLabel, type Product } from "@/lib/catalog";
 import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
 import styles from "./ShopSection.module.css";
@@ -19,6 +20,7 @@ export function ShopSection() {
   const { pick } = useLanguage();
   const [tab, setTab] = useState<Tab>("new");
   const [packs, setPacks] = useState<Record<string, string>>({});
+  const [quickProduct, setQuickProduct] = useState<Product | null>(null);
   const items = useMemo(() => products.filter((p) => p.tags.includes(tab)), [products, tab]);
 
   return (
@@ -85,6 +87,7 @@ export function ShopSection() {
                   badge={tab === "new" ? "new" : "in-stock"}
                   price={priceLabel(p)}
                   unit={variants ? pick("by pack size", "প্যাক অনুযায়ী") : undefined}
+                  onQuickView={() => setQuickProduct(p)}
                   variants={
                     variants && (
                       <PackSelector
@@ -102,12 +105,18 @@ export function ShopSection() {
         </div>
 
         <div className={styles.footer}>
-          <p className={styles.note}>Prices vary by pack size. Delivery charges calculated at checkout.</p>
+          <p className={styles.note}>
+            {pick(
+              "Prices vary by pack size. Delivery charges calculated at checkout.",
+              "প্যাক সাইজ অনুযায়ী মূল্য নির্ধারিত। ডেলিভারি চার্জ অর্ডারের সময় জানানো হবে।"
+            )}
+          </p>
           <Link className="btn btn-secondary" href="/shop">
-            View all products
+            {pick("View all products", "সব পণ্য দেখুন")}
           </Link>
         </div>
       </div>
+      <QuickViewModal product={quickProduct} onClose={() => setQuickProduct(null)} />
     </section>
   );
 }

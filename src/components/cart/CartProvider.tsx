@@ -20,6 +20,7 @@ export interface ResolvedLine extends CartLine {
   variantLabel?: string;
   unitPrice: number | null;
   kind: import("@/lib/content").ShapeKind;
+  image?: string;
 }
 
 interface CartContextValue {
@@ -32,6 +33,9 @@ interface CartContextValue {
   subtotal: number;
   unpricedCount: number;
   toast: string | null;
+  drawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
   addItem: (slug: string, variantId?: string, qty?: number) => void;
   setQty: (key: string, qty: number) => void;
   removeItem: (key: string) => void;
@@ -47,20 +51,24 @@ const MAX_QTY = 9999;
 function resolve(line: CartLine, findProduct: (slug: string) => Product | undefined): ResolvedLine | null {
   const product = findProduct(line.slug) ?? getProduct(line.slug);
   if (!product) return null;
+  const img = product.image || product.images?.[0];
   if (line.variantId && hasVariants(product)) {
     const v = product.variants.find((x) => x.id === line.variantId);
     if (!v) return null;
-    return { ...line, name: product.name, variantLabel: `Pack of ${v.pieces}`, unitPrice: v.price, kind: product.kind };
+    return { ...line, name: product.name, variantLabel: `Pack of ${v.pieces}`, unitPrice: v.price, kind: product.kind, image: img };
   }
-  return { ...line, name: product.name, unitPrice: product.price, kind: product.kind };
+  return { ...line, name: product.name, unitPrice: product.price, kind: product.kind, image: img };
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { getProduct: getLiveProduct } = useProducts();
   const [raw, setRaw] = useState<CartLine[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Restore after mount so server and first client render agree.
   useEffect(() => {
@@ -130,12 +138,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       subtotal: lines.reduce((sum, l) => sum + (l.unitPrice ?? 0) * l.qty, 0),
       unpricedCount: lines.filter((l) => l.unitPrice === null).length,
       toast,
+      drawerOpen,
+      openDrawer,
+      closeDrawer,
       addItem,
       setQty,
       removeItem,
       clear,
     };
-  }, [raw, hydrated, toast, addItem, setQty, removeItem, clear, getLiveProduct]);
+  }, [raw, hydrated, toast, drawerOpen, openDrawer, closeDrawer, addItem, setQty, removeItem, clear, getLiveProduct]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

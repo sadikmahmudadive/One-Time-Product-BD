@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
-import { CATEGORIES, hasVariants, isDirectBuy, lowestPrice, packSummary, priceLabel } from "@/lib/catalog";
+import { CATEGORIES, hasVariants, lowestPrice, packSummary, priceLabel } from "@/lib/catalog";
 import type { CategoryId, Product } from "@/lib/catalog";
 import { useLanguage } from "@/lib/i18n/context";
 import { useProducts } from "@/lib/products-context";
+import { PackSelector } from "./PackSelector";
 import { ProductCard } from "./ProductCard";
+import { QuickViewModal } from "./QuickViewModal";
 import styles from "./Catalog.module.css";
 
 type Sort = "featured" | "price-asc" | "price-desc";
@@ -19,20 +21,13 @@ const CAT_BN: Record<string, string> = {
   crates: "ক্রেট",
 };
 
-function cardAction(p: Product, chooseLabel: string, viewLabel: string) {
-  if (isDirectBuy(p)) return <AddToCartButton slug={p.slug} className="btn btn-primary btn-block" />;
-  return (
-    <Link className="btn btn-secondary btn-block" href={`/product/${p.slug}`}>
-      {hasVariants(p) ? chooseLabel : viewLabel}
-    </Link>
-  );
-}
-
 export function Catalog({ category }: { category?: CategoryId }) {
   const { products } = useProducts();
   const { lang, t, pick } = useLanguage();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
+  const [packs, setPacks] = useState<Record<string, string>>({});
+  const [quickProduct, setQuickProduct] = useState<Product | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The header's search icon links to /shop#search.
@@ -109,20 +104,71 @@ export function Catalog({ category }: { category?: CategoryId }) {
 
       {results.length > 0 ? (
         <ul className={styles.grid}>
-          {results.map((p) => (
-            <li key={p.slug}>
-              <ProductCard
-                name={p.name}
-                kind={p.kind}
-                image={p.image}
-                href={`/product/${p.slug}`}
-                badge={p.tags.includes("new") ? "new" : undefined}
-                meta={packSummary(p)}
-                price={priceLabel(p)}
-                action={cardAction(p, t.common.chooseOptions, t.common.viewProduct)}
-              />
-            </li>
-          ))}
+          {results.map((p) => {
+            const href = `/product/${p.slug}`;
+            const variants = hasVariants(p) ? p.variants : null;
+            const chosen = variants?.find((v) => v.id === packs[p.slug]);
+            const badge: "new" | "in-stock" | "low-stock" | undefined = p.tags.includes("new")
+              ? "new"
+              : p.available !== undefined && p.available <= (p.lowStockAt ?? 10)
+              ? "low-stock"
+              : p.available !== undefined && p.available > 0
+              ? "in-stock"
+              : undefined;
+
+            let action: React.ReactNode;
+            if (variants) {
+              action = !chosen ? (
+                <button type="button" className="btn btn-block" disabled>
+                  {t.product.choosePackSize}
+                </button>
+              ) : chosen.price === null ? (
+                <Link className="btn btn-secondary btn-block" href={`/quote?product=${p.slug}&pack=${chosen.pieces}`}>
+                  {t.product.askForPrice}
+                </Link>
+              ) : (
+                <AddToCartButton slug={p.slug} variantId={chosen.id} className="btn btn-primary btn-block">
+                  {pick(`Add pack of ${chosen.pieces}`, `${chosen.pieces} প্যাক যোগ করুন`)}
+                </AddToCartButton>
+              );
+            } else if (p.price === null) {
+              action = (
+                <Link className="btn btn-secondary btn-block" href={href}>
+                  {t.common.viewProduct}
+                </Link>
+              );
+            } else {
+              action = <AddToCartButton slug={p.slug} className="btn btn-primary btn-block" />;
+            }
+
+            return (
+              <li key={p.slug}>
+                <ProductCard
+                  name={p.name}
+                  kind={p.kind}
+                  image={p.image}
+                  href={href}
+                  badge={badge}
+                  meta={packSummary(p)}
+                  price={priceLabel(p)}
+                  unit={variants ? pick("by pack size", "প্যাক অনুযায়ী") : undefined}
+                  onQuickView={() => setQuickProduct(p)}
+                  variants={
+                    variants && (
+                      <PackSelector
+                        packs={variants.map((v) => v.pieces)}
+                        selected={chosen?.pieces}
+                        onSelect={(pieces) =>
+                          setPacks((s) => ({ ...s, [p.slug]: variants.find((v) => v.pieces === pieces)!.id }))
+                        }
+                      />
+                    )
+                  }
+                  action={action}
+                />
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <div className={styles.empty} role="status">
@@ -151,6 +197,7 @@ export function Catalog({ category }: { category?: CategoryId }) {
           {t.nav.requestBulkQuote}
         </Link>
       </aside>
+      <QuickViewModal product={quickProduct} onClose={() => setQuickProduct(null)} />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { QuantityStepper } from "@/components/commerce/QuantityStepper";
 import { ProductShape } from "@/components/ui/ProductShape";
+import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import { CATEGORIES, getProduct } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n/context";
@@ -55,7 +56,17 @@ export function CartView() {
               return (
                 <li key={l.key} className={styles.line}>
                   <Link href={`/product/${l.slug}`} className={styles.thumb} aria-label={l.name} tabIndex={-1}>
-                    <ProductShape kind={l.kind} />
+                    {l.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={buildCloudinaryUrl(l.image, { width: 160, height: 160, crop: "fill" })}
+                        alt={l.name}
+                        loading="lazy"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }}
+                      />
+                    ) : (
+                      <ProductShape kind={l.kind} />
+                    )}
                   </Link>
                   <div className={styles.info}>
                     <Link href={`/product/${l.slug}`} className={styles.name}>
