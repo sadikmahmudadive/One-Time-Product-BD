@@ -141,7 +141,7 @@ export function SettingsView({ contact, loading, needsRules, onSave, notify }: S
               description="Leave any field blank to show the bracketed placeholder on the storefront."
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
                   <div>
                     <label className="lbl" htmlFor="st-phone">
                       Phone Number
@@ -239,7 +239,7 @@ export function SettingsView({ contact, loading, needsRules, onSave, notify }: S
             </Panel>
 
             <Panel title="Social Profile" description="Used in the footer follow callout and Contact page.">
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
                 <div>
                   <label className="lbl" htmlFor="st-ig-handle">
                     Instagram Handle

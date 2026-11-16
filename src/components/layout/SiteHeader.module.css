@@ -341,19 +341,21 @@
 }
 
 .mobileNav {
-  padding-bottom: 20px;
+  padding-bottom: 24px;
+  max-height: calc(100dvh - var(--header-height) - 36px);
+  overflow-y: auto;
 }
 .mobileNav a[aria-current="page"] {
   color: var(--accent-500);
 }
 .mobileNav a {
   display: block;
-  padding: 16px 0;
+  padding: 15px 0;
   border-bottom: 1px solid rgba(231, 241, 235, 0.14);
   color: #fff;
   text-decoration: none;
   font-weight: 600;
-  font-size: 20px;
+  font-size: 18px;
 }
 
 @media (max-width: 1099px) {
@@ -371,15 +373,43 @@
   }
 }
 
-@media (max-width: 479px) {
-  .langBtn {
-    padding: 0 8px;
-    font-size: 11.5px;
-    min-height: 28px;
+@media (max-width: 640px) {
+  .bar {
+    gap: 10px;
+  }
+  .actions {
+    gap: 4px;
+  }
+  .iconBtn {
+    width: 38px;
+    height: 38px;
   }
   .cartBtn {
+    min-height: 38px;
     padding: 0 6px 0 12px;
     gap: 6px;
     font-size: 13px;
+  }
+  .cartCount {
+    min-width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .bar .langSwitch {
+    display: none;
+  }
+  .promoText {
+    font-size: 11.5px;
+  }
+  .promoBadge {
+    font-size: 9.5px;
+    padding: 2px 6px;
+  }
+  .promoCodeBtn {
+    font-size: 10.5px;
+    padding: 2px 6px;
   }
 }

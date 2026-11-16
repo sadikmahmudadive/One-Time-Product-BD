@@ -209,3 +209,17 @@
 .viewAll:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 520px) {
+  .scrim {
+    padding: 14px 10px;
+  }
+  .inputRow {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .body {
+    max-height: 70dvh;
+    padding: 12px 14px;
+  }
+}

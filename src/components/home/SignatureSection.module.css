@@ -163,3 +163,19 @@
   gap: 12px;
   margin-top: 40px;
 }
+
+@media (max-width: 560px) {
+  .callout {
+    font-size: 11.5px;
+    gap: 6px;
+  }
+  .line {
+    width: 16px;
+  }
+  .spec {
+    padding: 18px;
+  }
+  .val {
+    font-size: 28px;
+  }
+}

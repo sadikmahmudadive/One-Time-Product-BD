@@ -678,7 +678,7 @@ export function CouponsView({
           }
         >
           <div style={{ display: "grid", gap: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 14 }}>
               <div>
                 <label className="lbl" htmlFor="cp-code">
                   Promo Code *
@@ -773,8 +773,8 @@ export function CouponsView({
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 14, alignItems: "end" }}>
-              <div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-end" }}>
+              <div style={{ flex: "1 1 260px", minWidth: 0 }}>
                 <label className="lbl" htmlFor="cp-desc">
                   Internal Note / Campaign Label (optional)
                 </label>

@@ -251,6 +251,17 @@
 
 .ctaGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
   gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .header,
+  .body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .footer {
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+  }
 }

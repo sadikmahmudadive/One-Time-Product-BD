@@ -8,6 +8,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
@@ -16,6 +17,7 @@ body {
   color: var(--ink-950);
   font-family: var(--font-inter), var(--font-bengali), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
 html[lang="bn"] body {
@@ -95,11 +97,12 @@ textarea:focus-visible {
 }
 .section-title {
   margin: 0;
-  font-size: clamp(36px, 5vw, 76px);
-  line-height: 1;
+  font-size: clamp(28px, 5vw, 76px);
+  line-height: 1.04;
   letter-spacing: -0.04em;
   font-weight: 650;
   max-width: 900px;
+  overflow-wrap: break-word;
 }
 .section-lede {
   margin: 0;
@@ -334,6 +337,14 @@ textarea:focus-visible {
 @media (max-width: 960px) {
   .hide-sm {
     display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    min-height: 46px;
+    padding: 0 18px;
+    font-size: 14.5px;
   }
 }
 

@@ -3,6 +3,12 @@
   padding-bottom: clamp(64px, 8vw, 112px);
 }
 
+@media (max-width: 899px) {
+  .page {
+    padding-bottom: 108px;
+  }
+}
+
 .top {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -279,6 +285,12 @@
   gap: 16px;
   padding: 12px 0;
   border-top: 1px solid var(--line-200);
+}
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
 .row:first-child {
   border-top: 0;

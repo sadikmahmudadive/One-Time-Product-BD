@@ -19,13 +19,13 @@
 .dialog {
   position: relative;
   width: min(100%, 820px);
-  max-height: min(92vh, 720px);
+  max-height: min(92dvh, 720px);
   overflow-y: auto;
   background: var(--surface-0);
   color: var(--ink-950);
   border-radius: 22px;
   box-shadow: 0 24px 80px rgba(16, 45, 37, 0.28);
-  padding: clamp(18px, 3vw, 28px);
+  padding: clamp(16px, 3vw, 28px);
 }
 
 .closeBtn {

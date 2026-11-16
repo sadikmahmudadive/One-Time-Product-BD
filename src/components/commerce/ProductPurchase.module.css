@@ -196,9 +196,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
     min-height: 76px;
-    padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+    padding: 10px var(--gutter) calc(10px + env(safe-area-inset-bottom));
     background: rgba(255, 255, 255, 0.96);
     border-top: 1px solid var(--line-200);
     box-shadow: 0 -8px 28px rgba(16, 45, 37, 0.08);
@@ -209,6 +209,12 @@
   }
   .barOn {
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 420px) {
+  .buyButtons {
+    grid-template-columns: 1fr;
   }
 }
 
