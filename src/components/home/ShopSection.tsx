@@ -14,8 +14,6 @@ import styles from "./ShopSection.module.css";
 
 type Tab = "new" | "popular";
 
-const DELAYS = ["", "d2", "d3", "d4"];
-
 const CAT_BN: Record<string, string> = {
   square: "স্কয়ার বক্স",
   round: "রাউন্ড বক্স",
@@ -24,12 +22,13 @@ const CAT_BN: Record<string, string> = {
 };
 
 export function ShopSection() {
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
   const { lang, pick } = useLanguage();
   const [tab, setTab] = useState<Tab>("new");
   const [packs, setPacks] = useState<Record<string, string>>({});
   const [quickProduct, setQuickProduct] = useState<Product | null>(null);
   const items = useMemo(() => products.filter((p) => p.tags.includes(tab)), [products, tab]);
+  const isLoading = loading && products.length === 0;
 
   return (
     <section id="shop" className={`section ${styles.section}`}>
@@ -57,7 +56,17 @@ export function ShopSection() {
         </div>
 
         <div className={styles.grid}>
-          {items.map((p, i) => {
+          {isLoading
+            ? Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className={styles.skeletonCard} aria-hidden="true">
+                  <div className={styles.skeletonMedia} />
+                  <div className={styles.skeletonLine} style={{ width: "38%", height: 12 }} />
+                  <div className={styles.skeletonLine} style={{ width: "78%" }} />
+                  <div className={styles.skeletonLine} style={{ width: "45%", height: 20 }} />
+                  <div className={styles.skeletonLine} style={{ width: "100%", height: 42, borderRadius: 999 }} />
+                </div>
+              ))
+            : items.map((p) => {
             const href = `/product/${p.slug}`;
             const variants = hasVariants(p) ? p.variants : null;
             const chosen = variants?.find((v) => v.id === packs[p.slug]);
@@ -86,7 +95,7 @@ export function ShopSection() {
               action = <AddToCartButton slug={p.slug} className="btn btn-primary btn-block" />;
             }
             return (
-              <div key={`${tab}-${p.slug}`} className={tab === "new" ? `reveal ${DELAYS[i % 4]}` : undefined}>
+              <div key={`${tab}-${p.slug}`}>
                 <ProductCard
                   name={p.name}
                   kind={p.kind}

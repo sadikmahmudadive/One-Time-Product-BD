@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PRODUCTS, getCategory, priceLabel } from "@/lib/catalog";
+import { getCategory, priceLabel } from "@/lib/catalog";
 import type { Product } from "@/lib/catalog";
 import { uploadClientImage, buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import type { InventoryRecord } from "@/lib/firebase/firestore";
 import { ProductShape } from "@/components/ui/ProductShape";
-import { EmptyState, Icon, PageHeader, Panel, SearchField, Segmented, StatCard, Tone } from "../ui";
+import { EmptyState, Icon, PageHeader, Panel, SearchField, Segmented, SkeletonRows, StatCard, Tone } from "../ui";
 import styles from "../admin.module.css";
 
 type StockFilter = "all" | "attention" | "healthy" | "untracked";
@@ -24,14 +24,16 @@ export function stockHealth(record: InventoryRecord | undefined): Health {
 interface InventoryViewProps {
   products?: Product[];
   inventory: InventoryRecord[];
+  loading?: boolean;
   onSave: (slug: string, available: number, lowStockAt: number, imageUrl?: string) => Promise<void>;
   onExport: () => void;
   notify: (tone: "success" | "error", text: string) => void;
 }
 
-export function InventoryView({ products = PRODUCTS, inventory, onSave, onExport, notify }: InventoryViewProps) {
+export function InventoryView({ products = [], inventory, loading = false, onSave, onExport, notify }: InventoryViewProps) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StockFilter>("all");
+  const initial = loading && products.length === 0;
 
   const byslug = useMemo(() => new Map(inventory.map((i) => [i.slug, i])), [inventory]);
   const rows = useMemo(
@@ -62,10 +64,10 @@ export function InventoryView({ products = PRODUCTS, inventory, onSave, onExport
       />
 
       <div className={styles.statGrid}>
-        <StatCard label="Healthy" value={String(count(["healthy"]))} icon="check" hint={<span className={styles.deltaNone}>Above the alert level</span>} />
-        <StatCard label="Running low" value={String(count(["low"]))} icon="alert" hint={<span className={styles.deltaNone}>At or below the alert level</span>} />
-        <StatCard label="Out of stock" value={String(count(["out"]))} icon="inventory" hint={<span className={styles.deltaNone}>No units available</span>} />
-        <StatCard label="Not tracked" value={String(count(["untracked"]))} icon="inbox" hint={<span className={styles.deltaNone}>No stock set yet</span>} />
+        <StatCard label="Healthy" value={initial ? "—" : String(count(["healthy"]))} icon="check" hint={<span className={styles.deltaNone}>Above the alert level</span>} />
+        <StatCard label="Running low" value={initial ? "—" : String(count(["low"]))} icon="alert" hint={<span className={styles.deltaNone}>At or below the alert level</span>} />
+        <StatCard label="Out of stock" value={initial ? "—" : String(count(["out"]))} icon="inventory" hint={<span className={styles.deltaNone}>No units available</span>} />
+        <StatCard label="Not tracked" value={initial ? "—" : String(count(["untracked"]))} icon="inbox" hint={<span className={styles.deltaNone}>No stock set yet</span>} />
       </div>
 
       <Panel flush>
@@ -84,7 +86,9 @@ export function InventoryView({ products = PRODUCTS, inventory, onSave, onExport
           />
         </div>
 
-        {visible.length === 0 ? (
+        {initial ? (
+          <SkeletonRows />
+        ) : visible.length === 0 ? (
           <EmptyState title="No products match" text="Try a different search or filter." />
         ) : (
           <div className={styles.tableWrap}>

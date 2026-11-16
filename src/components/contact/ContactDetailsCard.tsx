@@ -9,18 +9,21 @@ import styles from "./ContactDetailsCard.module.css";
 function Detail({
   value,
   placeholder,
+  loading,
   href,
 }: {
   value: string | null;
   placeholder: string;
+  loading?: boolean;
   href?: (v: string) => string;
 }) {
+  if (loading && !value) return <span className={styles.placeholder} style={{ opacity: 0.55 }}>…</span>;
   if (!value) return <span className={styles.placeholder}>{placeholder}</span>;
   return href ? <a href={href(value)}>{value}</a> : <span>{value}</span>;
 }
 
 export function ContactDetailsCard() {
-  const { contact } = useContact();
+  const { contact, loading } = useContact();
   const { lang, pick } = useLanguage();
   const digits = (v: string) => v.replace(/\D/g, "");
   const address = (lang === "bn" && contact.addressBn) || contact.address;
@@ -37,6 +40,7 @@ export function ContactDetailsCard() {
             <Detail
               value={contact.whatsapp}
               placeholder={PLACEHOLDER.whatsapp}
+              loading={loading}
               href={(v) => `https://wa.me/${digits(v)}`}
             />
           </dd>
@@ -47,6 +51,7 @@ export function ContactDetailsCard() {
             <Detail
               value={contact.phone}
               placeholder={PLACEHOLDER.phone}
+              loading={loading}
               href={(v) => `tel:${v.replace(/\s/g, "")}`}
             />
           </dd>
@@ -57,6 +62,7 @@ export function ContactDetailsCard() {
             <Detail
               value={contact.email}
               placeholder={PLACEHOLDER.email}
+              loading={loading}
               href={(v) => `mailto:${v}`}
             />
           </dd>
@@ -64,7 +70,7 @@ export function ContactDetailsCard() {
         <div>
           <dt>{pick("Address", "ঠিকানা")}</dt>
           <dd>
-            <Detail value={address} placeholder={PLACEHOLDER.address} />
+            <Detail value={address} placeholder={PLACEHOLDER.address} loading={loading} />
           </dd>
         </div>
         <div>

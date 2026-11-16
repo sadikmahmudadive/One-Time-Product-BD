@@ -37,8 +37,9 @@ const SPAN_CLASS: Record<CategoryId, string> = {
 };
 
 export function CategoryBento() {
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
   const { lang, pick } = useLanguage();
+  const isLoading = loading && products.length === 0;
 
   return (
     <section id="categories" className={styles.section} aria-labelledby="bento-categories-heading">
@@ -80,13 +81,19 @@ export function CategoryBento() {
               >
                 <div className={styles.body}>
                   <div className={styles.topMeta}>
-                    <span className={styles.countPill}>
-                      {inCategory.length} {pick(inCategory.length === 1 ? "item" : "items", "টি পণ্য")}
-                    </span>
-                    {minPrice !== null && (
-                      <span className={styles.priceBadge}>
-                        {pick(`From ${formatPrice(minPrice)}`, `শুরু ${formatPrice(minPrice)}`)}
-                      </span>
+                    {isLoading ? (
+                      <span className={styles.skelPill} aria-hidden="true" />
+                    ) : (
+                      <>
+                        <span className={styles.countPill}>
+                          {inCategory.length} {pick(inCategory.length === 1 ? "item" : "items", "টি পণ্য")}
+                        </span>
+                        {minPrice !== null && (
+                          <span className={styles.priceBadge}>
+                            {pick(`From ${formatPrice(minPrice)}`, `শুরু ${formatPrice(minPrice)}`)}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -100,7 +107,9 @@ export function CategoryBento() {
                 </div>
 
                 <div className={styles.visual}>
-                  {featuredImage ? (
+                  {isLoading ? (
+                    <div className={styles.skelVisual} aria-hidden="true" />
+                  ) : featuredImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={buildCloudinaryUrl(featuredImage, { width: 380, height: 380, crop: "fill" })}

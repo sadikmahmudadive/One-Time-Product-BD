@@ -10,6 +10,7 @@ import { DEFAULT_CONTACT, type StoreContact } from "@/lib/contact";
 import { useContact } from "@/lib/contact-context";
 import type { Coupon } from "@/lib/coupons";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { DEMO_ORDERS, DEMO_QUOTES, DEMO_SUBSCRIBERS } from "@/lib/mock-admin-data";
 import {
   deleteCouponFromFirestore,
@@ -154,7 +155,7 @@ export function AdminDashboard() {
   const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]);
   const [inventory, setInventory] = useState<InventoryRecord[]>([]);
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(() => (isFirebaseConfigured ? [] : PRODUCTS));
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsNeedsRules, setCouponsNeedsRules] = useState(false);
   const [storeContact, setStoreContact] = useState<StoreContact>(DEFAULT_CONTACT);
@@ -236,7 +237,11 @@ export function AdminDashboard() {
       else failed.push(`subscribers (${reason(subscribersRes)})`);
       if (inventoryRes.status === "fulfilled") setInventory(inventoryRes.value);
       else failed.push(`inventory (${reason(inventoryRes)})`);
-      if (productsRes.status === "fulfilled" && productsRes.value.length > 0) setProducts(productsRes.value);
+      if (productsRes.status === "fulfilled") {
+        setProducts(productsRes.value.length > 0 ? productsRes.value : PRODUCTS);
+      } else if (products.length === 0) {
+        setProducts(PRODUCTS);
+      }
       if (contactRes.status === "fulfilled") {
         setSettingsNeedsRules(false);
         if (contactRes.value) setStoreContact(contactRes.value);
@@ -488,7 +493,7 @@ export function AdminDashboard() {
   const exportInventory = () =>
     exportCsv(
       "otpb-inventory",
-      PRODUCTS.map((p) => {
+      products.map((p) => {
         const inv = inventory.find((i) => i.slug === p.slug);
         return {
           slug: p.slug,
@@ -747,7 +752,16 @@ export function AdminDashboard() {
               notify={notify}
             />
           )}
-          {tab === "inventory" && <InventoryView products={products} inventory={inventory} onSave={saveStock} onExport={exportInventory} notify={notify} />}
+          {tab === "inventory" && (
+            <InventoryView
+              products={products}
+              inventory={inventory}
+              loading={loading}
+              onSave={saveStock}
+              onExport={exportInventory}
+              notify={notify}
+            />
+          )}
           {tab === "customers" && (
             <CustomersView
               orders={orders}

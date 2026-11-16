@@ -24,7 +24,8 @@ const CAT_BN: Record<string, string> = {
 };
 
 export function Catalog({ category }: { category?: CategoryId }) {
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
+  const isLoading = loading && products.length === 0;
   const { lang, t, pick } = useLanguage();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
@@ -81,11 +82,11 @@ export function Catalog({ category }: { category?: CategoryId }) {
     <div className={`wrap ${styles.wrap}`}>
       <nav aria-label="Product categories" className={styles.tabs}>
         <Link href="/shop" className={styles.tab} aria-current={!category ? "page" : undefined}>
-          {t.footer.allProducts} <span>{products.length}</span>
+          {t.footer.allProducts} <span>{isLoading ? "…" : products.length}</span>
         </Link>
         {CATEGORIES.map((c) => (
           <Link key={c.id} href={`/shop/${c.id}`} className={styles.tab} aria-current={category === c.id ? "page" : undefined}>
-            {lang === "bn" ? CAT_BN[c.id] ?? c.short : c.short} <span>{products.filter((p) => p.category === c.id).length}</span>
+            {lang === "bn" ? CAT_BN[c.id] ?? c.short : c.short} <span>{isLoading ? "…" : products.filter((p) => p.category === c.id).length}</span>
           </Link>
         ))}
       </nav>
@@ -116,7 +117,7 @@ export function Catalog({ category }: { category?: CategoryId }) {
           </select>
         </div>
         <p className={styles.count} aria-live="polite">
-          {results.length} {pick(results.length === 1 ? "product" : "products", "টি পণ্য")}
+          {isLoading ? pick("Loading products…", "পণ্য লোড হচ্ছে…") : `${results.length} ${pick(results.length === 1 ? "product" : "products", "টি পণ্য")}`}
         </p>
       </div>
 
@@ -144,7 +145,19 @@ export function Catalog({ category }: { category?: CategoryId }) {
         </button>
       </div>
 
-      {results.length > 0 ? (
+      {isLoading ? (
+        <ul className={styles.grid} aria-busy="true" aria-label={pick("Loading products", "পণ্য লোড হচ্ছে")}>
+          {Array.from({ length: 8 }, (_, i) => (
+            <li key={i} className={styles.skeletonCard} aria-hidden="true">
+              <div className={styles.skeletonMedia} />
+              <div className={styles.skeletonLine} style={{ width: "36%", height: 12 }} />
+              <div className={styles.skeletonLine} style={{ width: "78%" }} />
+              <div className={styles.skeletonLine} style={{ width: "44%", height: 20 }} />
+              <div className={styles.skeletonLine} style={{ width: "100%", height: 42, borderRadius: 999 }} />
+            </li>
+          ))}
+        </ul>
+      ) : results.length > 0 ? (
         <ul className={styles.grid}>
           {results.map((p) => {
             const href = `/product/${p.slug}`;

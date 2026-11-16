@@ -9,8 +9,8 @@ import { NewsletterForm } from "./NewsletterForm";
 import styles from "./SiteFooter.module.css";
 
 export function SiteFooter() {
-  const { lang, t } = useLanguage();
-  const { contact } = useContact();
+  const { lang, t, pick } = useLanguage();
+  const { contact, loading: contactLoading } = useContact();
   const displayAddress = (lang === "bn" && contact.addressBn) || contact.address;
 
   const footerGroups = [
@@ -91,21 +91,27 @@ export function SiteFooter() {
           <div>
             <p className={styles.heading}>{t.footer.contactHeading}</p>
             <div className={`${styles.list} ${styles.contact}`}>
-              {contact.phone ? (
-                <a className={styles.link} href={`tel:${contact.phone.replace(/\s+/g, "")}`}>
-                  {contact.phone}
-                </a>
+              {contactLoading ? (
+                <span style={{ opacity: 0.65 }}>{pick("Loading contact details…", "যোগাযোগের তথ্য লোড হচ্ছে…")}</span>
               ) : (
-                <span>{PLACEHOLDER.phone}</span>
+                <>
+                  {contact.phone ? (
+                    <a className={styles.link} href={`tel:${contact.phone.replace(/\s+/g, "")}`}>
+                      {contact.phone}
+                    </a>
+                  ) : (
+                    <span>{PLACEHOLDER.phone}</span>
+                  )}
+                  {contact.email ? (
+                    <a className={styles.link} href={`mailto:${contact.email}`}>
+                      {contact.email}
+                    </a>
+                  ) : (
+                    <span>{PLACEHOLDER.email}</span>
+                  )}
+                  <span>{displayAddress ?? PLACEHOLDER.address}</span>
+                </>
               )}
-              {contact.email ? (
-                <a className={styles.link} href={`mailto:${contact.email}`}>
-                  {contact.email}
-                </a>
-              ) : (
-                <span>{PLACEHOLDER.email}</span>
-              )}
-              <span>{displayAddress ?? PLACEHOLDER.address}</span>
             </div>
           </div>
         </div>

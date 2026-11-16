@@ -8,7 +8,7 @@ import { buildCloudinaryUrl, uploadClientImage, uploadMultipleClientImages } fro
 import { ProductShape } from "@/components/ui/ProductShape";
 import { ProductCard } from "@/components/commerce/ProductCard";
 import { formatPrice } from "@/lib/format";
-import { EmptyState, Icon, PageHeader, Panel, SearchField, Segmented, StatCard } from "../ui";
+import { EmptyState, Icon, PageHeader, Panel, SearchField, Segmented, SkeletonRows, StatCard } from "../ui";
 import styles from "../admin.module.css";
 
 interface ProductsViewProps {
@@ -94,6 +94,8 @@ export function ProductsView({
     );
   }
 
+  const initial = loading && products.length === 0;
+
   return (
     <div className={styles.stack}>
       <PageHeader
@@ -128,25 +130,25 @@ export function ProductsView({
       <div className={styles.statGrid}>
         <StatCard
           label="Total Products"
-          value={String(products.length)}
+          value={initial ? "—" : String(products.length)}
           icon="inventory"
           hint={<span className={styles.deltaNone}>Across 4 packaging categories</span>}
         />
         <StatCard
           label="In Stock"
-          value={String(inStockCount)}
+          value={initial ? "—" : String(inStockCount)}
           icon="check"
           hint={<span className={styles.deltaNone}>Healthy warehouse inventory</span>}
         />
         <StatCard
           label="Low / Out of Stock"
-          value={String(lowStockCount + outOfStockCount)}
+          value={initial ? "—" : String(lowStockCount + outOfStockCount)}
           icon="alert"
-          hint={<span className={styles.deltaNone}>{outOfStockCount} zero stock, {lowStockCount} running low</span>}
+          hint={<span className={styles.deltaNone}>{initial ? "Loading stock…" : `${outOfStockCount} zero stock, ${lowStockCount} running low`}</span>}
         />
         <StatCard
           label="Direct Buy Items"
-          value={String(products.filter((p) => p.price !== null).length)}
+          value={initial ? "—" : String(products.filter((p) => p.price !== null).length)}
           icon="orders"
           hint={<span className={styles.deltaNone}>Single-price instant checkout</span>}
         />
@@ -175,7 +177,9 @@ export function ProductsView({
           />
         </div>
 
-        {visible.length === 0 ? (
+        {initial ? (
+          <SkeletonRows />
+        ) : visible.length === 0 ? (
           <EmptyState title="No products found" text="Try a different search term or category filter." />
         ) : (
           <div className={styles.tableWrap}>

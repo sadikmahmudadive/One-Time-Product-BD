@@ -67,7 +67,7 @@ const TOAST_MS = 2600;
 const MAX_QTY = 9999;
 
 function resolve(line: CartLine, findProduct: (slug: string) => Product | undefined): ResolvedLine | null {
-  const product = findProduct(line.slug) ?? getProduct(line.slug);
+  const product = findProduct(line.slug);
   if (!product) return null;
   const img = product.image || product.images?.[0];
   if (line.variantId && hasVariants(product)) {
@@ -79,7 +79,7 @@ function resolve(line: CartLine, findProduct: (slug: string) => Product | undefi
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { getProduct: getLiveProduct } = useProducts();
+  const { getProduct: getLiveProduct, loading: productsLoading } = useProducts();
   const [raw, setRaw] = useState<CartLine[]>([]);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -226,7 +226,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       check && !check.valid && check.reason === "min_order" ? check.minOrder ?? null : null;
 
     return {
-      ready: hydrated,
+      ready: hydrated && !productsLoading,
       count: lines.reduce((n, l) => n + l.qty, 0),
       lines,
       subtotal,
@@ -248,6 +248,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
   }, [
     hydrated,
+    productsLoading,
     lines,
     subtotal,
     coupon,

@@ -33,13 +33,14 @@ export function ProductDetailView({
   category: CategoryInfo;
   initialRelated: Product[];
 }) {
-  const { products, getProduct: getLiveProduct } = useProducts();
+  const { products, loading, getProduct: getLiveProduct } = useProducts();
   const { t, pick } = useLanguage();
   const [copiedLink, setCopiedLink] = useState(false);
   const [quickProduct, setQuickProduct] = useState<Product | null>(null);
   const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
 
-  const product = getLiveProduct(initialProduct.slug) ?? initialProduct;
+  const hasLiveCatalogue = !loading && products.length > 0;
+  const product = (hasLiveCatalogue ? getLiveProduct(initialProduct.slug) : null) ?? initialProduct;
   const material = product.specs?.find(([label]) => label.toLowerCase() === "material")?.[1];
 
   const productImages =
@@ -63,15 +64,16 @@ export function ProductDetailView({
   }, [product.slug]);
 
   const related =
-    products.length > 0
+    hasLiveCatalogue
       ? [
           ...products.filter((p) => p.category === product.category && p.slug !== product.slug),
           ...products.filter((p) => p.category !== product.category && p.slug !== product.slug),
         ].slice(0, 4)
       : initialRelated;
 
+  const recentPool = hasLiveCatalogue ? products : initialRelated;
   const recentlyViewed = recentSlugs
-    .map((s) => products.find((p) => p.slug === s) ?? initialRelated.find((p) => p.slug === s))
+    .map((s) => recentPool.find((p) => p.slug === s))
     .filter((p): p is Product => Boolean(p))
     .filter((p) => p.slug !== product.slug)
     .slice(0, 4);

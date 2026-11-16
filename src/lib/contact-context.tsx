@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { DEFAULT_CONTACT, normalizeContact, type StoreContact } from "./contact";
+import { isFirebaseConfigured } from "./firebase/config";
 import { getStoreContactFromFirestore, subscribeStoreContact } from "./firebase/firestore";
 
 interface ContactContextValue {
@@ -22,9 +23,13 @@ const ContactContext = createContext<ContactContextValue | null>(null);
 
 export function ContactProvider({ children }: { children: ReactNode }) {
   const [contact, setContact] = useState<StoreContact>(DEFAULT_CONTACT);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(isFirebaseConfigured);
 
   const refresh = useCallback(async () => {
+    if (!isFirebaseConfigured) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const live = await getStoreContactFromFirestore();
@@ -37,6 +42,10 @@ export function ContactProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setLoading(false);
+      return;
+    }
     void refresh();
     const unsub = subscribeStoreContact(
       (live) => {

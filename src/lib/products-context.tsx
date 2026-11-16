@@ -11,6 +11,7 @@ import {
 } from "react";
 import { PRODUCTS as STATIC_PRODUCTS } from "./catalog";
 import type { CategoryId, Product } from "./catalog";
+import { isFirebaseConfigured } from "./firebase/config";
 import { getProductsFromFirestore } from "./firebase/firestore";
 
 interface ProductsContextValue {
@@ -26,35 +27,46 @@ interface ProductsContextValue {
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(STATIC_PRODUCTS);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(() =>
+    isFirebaseConfigured ? [] : STATIC_PRODUCTS
+  );
+  const [loading, setLoading] = useState<boolean>(isFirebaseConfigured);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!isFirebaseConfigured) {
+      setProducts(STATIC_PRODUCTS);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
       const live = await getProductsFromFirestore();
-      if (live && live.length > 0) {
-        setProducts(live);
-      }
+      setProducts(live && live.length > 0 ? live : STATIC_PRODUCTS);
     } catch (err) {
       console.warn("ProductsProvider failed to fetch live products:", err);
       setError((err as Error).message || "Failed to load products");
+      setProducts((prev) => (prev.length > 0 ? prev : STATIC_PRODUCTS));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const getProduct = useCallback(
     (slug: string): Product | undefined => {
-      return products.find((p) => p.slug === slug) ?? STATIC_PRODUCTS.find((p) => p.slug === slug);
+      const liveMatch = products.find((p) => p.slug === slug);
+      if (liveMatch) return liveMatch;
+      if (!isFirebaseConfigured || (!loading && products.length === 0)) {
+        return STATIC_PRODUCTS.find((p) => p.slug === slug);
+      }
+      return undefined;
     },
-    [products]
+    [products, loading]
   );
 
   const productsIn = useCallback(
@@ -103,4 +115,3 @@ export function useProducts(): ProductsContextValue {
   }
   return ctx;
 }
-
