@@ -20,7 +20,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 32px;
+  min-height: 36px;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 
 .utilityText {
@@ -28,6 +30,101 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.promoStrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.promoBadge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-500);
+  color: #0a201a;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.promoText {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #f3f7f4;
+  font-weight: 500;
+}
+
+.promoLink {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.promoLink:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.promoCodeBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px dashed rgba(183, 217, 87, 0.6);
+  background: rgba(183, 217, 87, 0.12);
+  color: var(--accent-500);
+  font: 700 11px var(--font-inter), system-ui, sans-serif;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.promoCodeBtn:hover {
+  background: rgba(183, 217, 87, 0.24);
+  border-color: var(--accent-500);
+}
+
+.promoNav {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.promoStepBtn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(231, 241, 235, 0.65);
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.promoStepBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .utilityLinks {
@@ -55,6 +152,9 @@
   .utilityText {
     text-align: center;
     width: 100%;
+  }
+  .promoStrip {
+    justify-content: center;
   }
 }
 

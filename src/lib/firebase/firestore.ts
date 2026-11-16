@@ -18,6 +18,7 @@ import {
 import { PRODUCTS, type Product } from "@/lib/catalog";
 import { normalizeContact, type StoreContact } from "@/lib/contact";
 import { normalizeCoupon, normalizeCouponCode, type Coupon } from "@/lib/coupons";
+import { normalizePromos, type PromoBannerItem } from "@/lib/promos";
 import { db, isFirebaseConfigured } from "./config";
 
 function requireDb() {
@@ -540,5 +541,53 @@ export async function deleteCouponFromFirestore(code: string): Promise<void> {
   const cleanCode = normalizeCouponCode(code);
   if (!cleanCode) return;
   await deleteDoc(doc(requireDb(), "coupons", cleanCode));
+}
+
+/** Read top announcement / promo bar offers (`settings/promotions`). */
+export async function getPromosFromFirestore(): Promise<PromoBannerItem[]> {
+  if (!isFirebaseConfigured || !db) return [];
+  const snap = await getDoc(doc(db, "settings", "promotions"));
+  if (!snap.exists()) return [];
+  return normalizePromos((snap.data() as { items?: unknown }).items);
+}
+
+/** Subscribe to real-time updates on `settings/promotions`. */
+export function subscribePromos(
+  onData: (items: PromoBannerItem[]) => void,
+  onError?: (err: Error) => void
+): () => void {
+  if (!isFirebaseConfigured || !db) return () => {};
+  return onSnapshot(
+    doc(db, "settings", "promotions"),
+    (snap) => {
+      const items = snap.exists() ? normalizePromos((snap.data() as { items?: unknown }).items) : [];
+      onData(items);
+    },
+    (err) => {
+      onError?.(err);
+    }
+  );
+}
+
+/** Save top announcement / promo bar offers from the admin panel to `settings/promotions`. */
+export async function savePromosToFirestore(items: PromoBannerItem[]): Promise<PromoBannerItem[]> {
+  const normalized = normalizePromos(items);
+  await setDoc(
+    doc(requireDb(), "settings", "promotions"),
+    {
+      items: normalized.map((p) => ({
+        id: p.id,
+        text: p.text,
+        active: p.active,
+        ...(p.badge ? { badge: p.badge } : {}),
+        ...(p.textBn ? { textBn: p.textBn } : {}),
+        ...(p.code ? { code: p.code } : {}),
+        ...(p.href ? { href: p.href } : {}),
+      })),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+  return normalized;
 }
 
