@@ -387,19 +387,34 @@ html.lenis body {
 }
 
 /* Printing the admin delivery slip: hide everything except the slip while one is on screen. */
+@page {
+  size: auto;
+  margin: 12mm;
+}
+
 @media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
   body:has(.admin-slip) * {
     visibility: hidden;
   }
-  .admin-slip,
-  .admin-slip * {
-    visibility: visible;
+  body:has(.admin-slip) .admin-slip,
+  body:has(.admin-slip) .admin-slip * {
+    visibility: visible !important;
   }
-  .admin-slip {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+  body:has(.admin-slip) .admin-slip {
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
+    border-radius: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

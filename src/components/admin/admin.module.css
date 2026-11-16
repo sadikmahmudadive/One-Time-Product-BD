@@ -2246,3 +2246,53 @@
   align-items: center;
   margin-top: 12px;
 }
+
+/* ---------- Print delivery slip cleanly without modal centering, clipping or extra pages ---------- */
+@media print {
+  .shell:has(:global(.admin-slip)) .sidebar,
+  .shell:has(:global(.admin-slip)) .workspace,
+  .shell:has(:global(.admin-slip)) .toasts,
+  .modalRoot:has(:global(.admin-slip)) .scrim,
+  .modalRoot:has(:global(.admin-slip)) .modalBar {
+    display: none !important;
+  }
+
+  .shell:has(:global(.admin-slip)) {
+    display: block !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .modalRoot:has(:global(.admin-slip)) {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .modalRoot:has(:global(.admin-slip)) .modal {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-height: none !important;
+    transform: none !important;
+    animation: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .modalRoot:has(:global(.admin-slip)) .modalScroll {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .slipTable tr,
+  .slipSign {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
