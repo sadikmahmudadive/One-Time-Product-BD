@@ -12,7 +12,7 @@ import { useCart } from "./CartProvider";
 import styles from "./CartDrawer.module.css";
 
 export function CartDrawer() {
-  const { ready, lines, count, subtotal, unpricedCount, drawerOpen, closeDrawer, setQty, removeItem } = useCart();
+  const { ready, lines, count, subtotal, coupon, discountAmount, finalTotal, unpricedCount, drawerOpen, closeDrawer, setQty, removeItem } = useCart();
   const { t, pick } = useLanguage();
   const pathname = usePathname();
 
@@ -113,8 +113,24 @@ export function CartDrawer() {
           <div className={styles.footer}>
             <div className={styles.subtotalRow}>
               <span>{t.cart.subtotal}</span>
-              <strong>{formatPrice(subtotal)}</strong>
+              <strong>{formatPrice(discountAmount > 0 ? finalTotal : subtotal)}</strong>
             </div>
+            {discountAmount > 0 && coupon && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--success-700)",
+                }}
+              >
+                <span>
+                  {pick("Promo applied", "প্রোমো")} ({coupon.code})
+                </span>
+                <span>-{formatPrice(discountAmount)}</span>
+              </div>
+            )}
             {unpricedCount > 0 ? (
               <p className={styles.note}>
                 {pick(

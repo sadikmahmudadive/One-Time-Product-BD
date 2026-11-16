@@ -403,6 +403,24 @@ export function OrderTracker() {
                   </li>
                 ))}
               </ul>
+              {typeof trackedOrder.discountAmount === "number" && trackedOrder.discountAmount > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13.5,
+                    color: "var(--success-700)",
+                    fontWeight: 600,
+                    padding: "8px 0 4px",
+                  }}
+                >
+                  <span>
+                    {pick("Promo discount", "প্রোমো ছাড়")}
+                    {trackedOrder.couponCode ? ` (${trackedOrder.couponCode})` : ""}
+                  </span>
+                  <span>-{formatPrice(trackedOrder.discountAmount)}</span>
+                </div>
+              )}
               <div className={styles.totalRow}>
                 <span>{t.track.totalLabel}</span>
                 <span>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CouponBox } from "@/components/commerce/CouponBox";
 import { QuantityStepper } from "@/components/commerce/QuantityStepper";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
@@ -11,7 +12,7 @@ import { useCart } from "./CartProvider";
 import styles from "./CartView.module.css";
 
 export function CartView() {
-  const { ready, lines, subtotal, unpricedCount, setQty, removeItem, clear } = useCart();
+  const { ready, lines, subtotal, coupon, discountAmount, finalTotal, unpricedCount, setQty, removeItem, clear } = useCart();
   const { t, pick } = useLanguage();
 
   if (!ready) return <div className={`wrap ${styles.wrap}`} aria-busy="true" style={{ minHeight: 320 }} />;
@@ -97,15 +98,30 @@ export function CartView() {
           <h2 id="summary-h" className={styles.h2}>
             {t.checkout.orderSummary}
           </h2>
+          {unpricedCount === 0 && <CouponBox />}
           <dl className={styles.sums}>
             <div>
               <dt>{t.cart.subtotal}{unpricedCount > 0 && pick(" (priced items)", " (নির্ধারিত মূল্যের)")}</dt>
               <dd>{formatPrice(subtotal)}</dd>
             </div>
+            {discountAmount > 0 && coupon && (
+              <div style={{ color: "var(--success-700)" }}>
+                <dt style={{ color: "var(--success-700)", fontWeight: 600 }}>
+                  {pick("Promo", "প্রোমো")} ({coupon.code})
+                </dt>
+                <dd>-{formatPrice(discountAmount)}</dd>
+              </div>
+            )}
             <div>
               <dt>{pick("Delivery", "ডেলিভারি")}</dt>
               <dd className={styles.muted}>{pick("Confirmed with your order", "অর্ডার নিশ্চিত হলে জানানো হবে")}</dd>
             </div>
+            {discountAmount > 0 && (
+              <div style={{ paddingTop: 12, borderTop: "1px solid var(--line-200)", fontSize: 17 }}>
+                <dt style={{ color: "var(--brand-950)", fontWeight: 700 }}>{pick("Total", "সর্বমোট")}</dt>
+                <dd style={{ color: "var(--brand-950)" }}>{formatPrice(finalTotal)}</dd>
+              </div>
+            )}
           </dl>
           {unpricedCount > 0 && (
             <p className={styles.notice} role="note">

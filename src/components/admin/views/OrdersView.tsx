@@ -332,8 +332,26 @@ function OrderDrawer({
               ))}
             </ul>
             <dl className={styles.totals}>
+              {typeof order.discountAmount === "number" && order.discountAmount > 0 && (
+                <>
+                  <div>
+                    <dt>Subtotal</dt>
+                    <dd>
+                      {order.subtotal !== undefined && order.subtotal !== null
+                        ? formatPrice(order.subtotal)
+                        : order.totalPrice !== null
+                        ? formatPrice(order.totalPrice + order.discountAmount)
+                        : totalText(order)}
+                    </dd>
+                  </div>
+                  <div style={{ color: "var(--success-700)" }}>
+                    <dt>Promo{order.couponCode ? ` (${order.couponCode})` : ""}</dt>
+                    <dd>-{formatPrice(order.discountAmount)}</dd>
+                  </div>
+                </>
+              )}
               <div>
-                <dt>Subtotal</dt>
+                <dt>Total</dt>
                 <dd>{totalText(order)}</dd>
               </div>
               <div>

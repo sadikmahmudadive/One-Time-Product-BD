@@ -1,6 +1,6 @@
-export type Tab = "overview" | "orders" | "quotes" | "products" | "inventory" | "customers" | "media" | "settings";
+export type Tab = "overview" | "orders" | "quotes" | "coupons" | "products" | "inventory" | "customers" | "media" | "settings";
 
-export const TABS: Tab[] = ["overview", "orders", "quotes", "products", "inventory", "customers", "media", "settings"];
+export const TABS: Tab[] = ["overview", "orders", "quotes", "coupons", "products", "inventory", "customers", "media", "settings"];
 
 export interface StockSummary {
   /** Products with an inventory record. */

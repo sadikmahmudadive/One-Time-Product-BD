@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
+import { CouponBox } from "@/components/commerce/CouponBox";
 import { ProductShape } from "@/components/ui/ProductShape";
 import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import { useAuth } from "@/lib/firebase/auth-context";
@@ -16,7 +17,7 @@ type Status = "idle" | "sending" | "error";
 
 export function CheckoutForm() {
   const router = useRouter();
-  const { ready, lines, subtotal, unpricedCount, clear } = useCart();
+  const { ready, lines, subtotal, coupon, discountAmount, finalTotal, unpricedCount, clear } = useCart();
   const { user } = useAuth();
   const { t, pick } = useLanguage();
   const [status, setStatus] = useState<Status>("idle");
@@ -59,17 +60,20 @@ export function CheckoutForm() {
     const fields = Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>;
     setStatus("sending");
     try {
+      const netTotal = discountAmount > 0 ? finalTotal : subtotal;
       const orderId = await submitOrder({
         userId: user?.uid,
         customer: { name: fields.name, phone: fields.phone, email: fields.email || user?.email || undefined, district: fields.district, address: fields.address || undefined },
         items: lines.map((line) => ({ slug: line.slug, name: line.name, variantId: line.variantId, variantLabel: line.variantLabel, unitPrice: line.unitPrice, qty: line.qty, subtotal: line.unitPrice === null ? null : line.unitPrice * line.qty })),
-        totalPrice: subtotal,
+        subtotal,
+        ...(coupon && discountAmount > 0 ? { couponCode: coupon.code, discountAmount } : {}),
+        totalPrice: netTotal,
         status: "pending",
       });
       try {
         const key = "otpb_recent_orders";
         const prev = JSON.parse(localStorage.getItem(key) || "[]") as { id: string; date: string; total: number }[];
-        const next = [{ id: orderId, date: new Date().toISOString(), total: subtotal }, ...prev.filter((o) => o.id !== orderId)].slice(0, 5);
+        const next = [{ id: orderId, date: new Date().toISOString(), total: netTotal }, ...prev.filter((o) => o.id !== orderId)].slice(0, 5);
         localStorage.setItem(key, JSON.stringify(next));
       } catch {
         // Ignore storage restrictions
@@ -127,7 +131,27 @@ export function CheckoutForm() {
           </li>
         ))}
       </ul>
-      <div className={styles.total}><span>{t.cart.subtotal}</span><strong>{formatPrice(subtotal)}</strong></div>
+      <div style={{ margin: "18px 0", paddingTop: 18, borderTop: "1px solid var(--line-200)" }}>
+        <CouponBox />
+      </div>
+      <div className={styles.total}>
+        <span>{t.cart.subtotal}</span>
+        <strong>{formatPrice(subtotal)}</strong>
+      </div>
+      {discountAmount > 0 && coupon && (
+        <div className={styles.discountRow}>
+          <span>
+            {pick("Discount", "ছাড়")} ({coupon.code})
+          </span>
+          <strong>-{formatPrice(discountAmount)}</strong>
+        </div>
+      )}
+      {discountAmount > 0 && (
+        <div className={styles.grandRow}>
+          <span>{pick("Total", "সর্বমোট")}</span>
+          <strong>{formatPrice(finalTotal)}</strong>
+        </div>
+      )}
       <p>{t.cart.note}</p>
     </aside>
   </form></div>;

@@ -67,5 +67,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Promo Coupons (Exact code lookup is public for checkout; listing & management are admin-only)
+    match /coupons/{code} {
+      allow get: if true;
+      allow list, write: if isAdmin();
+    }
   }
 }

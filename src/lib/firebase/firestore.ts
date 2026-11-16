@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { PRODUCTS, type Product } from "@/lib/catalog";
 import { normalizeContact, type StoreContact } from "@/lib/contact";
+import { normalizeCoupon, normalizeCouponCode, type Coupon } from "@/lib/coupons";
 import { db, isFirebaseConfigured } from "./config";
 
 function requireDb() {
@@ -355,6 +356,9 @@ export interface OrderRecord {
     qty: number;
     subtotal: number | null;
   }[];
+  subtotal?: number | null;
+  couponCode?: string;
+  discountAmount?: number;
   totalPrice: number | null;
   status: "pending" | "confirmed" | "shipped" | "cancelled";
   createdAt?: unknown;
@@ -363,11 +367,34 @@ export interface OrderRecord {
 /** Save an order to Firestore */
 export async function saveOrderToFirestore(order: Omit<OrderRecord, "id" | "createdAt">): Promise<string> {
   const database = requireDb();
-  const docRef = await addDoc(collection(database, "orders"), {
-    ...order,
+  const payload: Record<string, unknown> = {
+    customer: {
+      name: order.customer.name,
+      phone: order.customer.phone,
+      district: order.customer.district,
+      ...(order.customer.email ? { email: order.customer.email } : {}),
+      ...(order.customer.address ? { address: order.customer.address } : {}),
+    },
+    items: order.items.map((item) => ({
+      slug: item.slug,
+      name: item.name,
+      ...(item.variantId ? { variantId: item.variantId } : {}),
+      ...(item.variantLabel ? { variantLabel: item.variantLabel } : {}),
+      unitPrice: item.unitPrice ?? null,
+      qty: item.qty,
+      subtotal: item.subtotal ?? null,
+    })),
+    totalPrice: order.totalPrice ?? null,
     status: order.status || "pending",
     createdAt: serverTimestamp(),
-  });
+  };
+
+  if (order.userId) payload.userId = order.userId;
+  if (order.subtotal !== undefined) payload.subtotal = order.subtotal;
+  if (order.couponCode) payload.couponCode = order.couponCode;
+  if (order.discountAmount !== undefined && order.discountAmount > 0) payload.discountAmount = order.discountAmount;
+
+  const docRef = await addDoc(collection(database, "orders"), payload);
   return docRef.id;
 }
 
@@ -459,5 +486,59 @@ export async function saveStoreContactToFirestore(contact: StoreContact): Promis
     { merge: true }
   );
   return normalized;
+}
+
+/** Look up a single coupon document by uppercase promo code (exact match for customer validation). */
+export async function getCouponFromFirestore(code: string): Promise<Coupon | null> {
+  const cleanCode = normalizeCouponCode(code);
+  if (!cleanCode || !isFirebaseConfigured || !db) return null;
+  const snap = await getDoc(doc(db, "coupons", cleanCode));
+  if (!snap.exists()) return null;
+  const data = snap.data() as Partial<Coupon>;
+  return normalizeCoupon({ ...data, code: data.code || snap.id });
+}
+
+/** List all promo coupons for the admin operations view. */
+export async function getCouponsFromFirestore(): Promise<Coupon[]> {
+  const database = requireDb();
+  const snapshot = await getDocs(collection(database, "coupons"));
+  const list = snapshot.docs.map((d) => {
+    const data = d.data() as Partial<Coupon>;
+    return normalizeCoupon({ ...data, code: data.code || d.id });
+  });
+  return list.sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/** Create or update a promo coupon in Firestore using its uppercase code as document ID. */
+export async function saveCouponToFirestore(coupon: Coupon): Promise<Coupon> {
+  const normalized = normalizeCoupon(coupon);
+  if (!normalized.code) {
+    throw new Error("Coupon code is required.");
+  }
+  const database = requireDb();
+  await setDoc(
+    doc(database, "coupons", normalized.code),
+    {
+      code: normalized.code,
+      type: normalized.type,
+      value: normalized.value,
+      minOrder: normalized.minOrder ?? null,
+      maxDiscount: normalized.maxDiscount ?? null,
+      expiresAt: normalized.expiresAt ?? null,
+      active: normalized.active,
+      description: normalized.description || "",
+      updatedAt: serverTimestamp(),
+      ...(normalized.createdAt ? {} : { createdAt: serverTimestamp() }),
+    },
+    { merge: true }
+  );
+  return normalized;
+}
+
+/** Delete a promo coupon document by code. */
+export async function deleteCouponFromFirestore(code: string): Promise<void> {
+  const cleanCode = normalizeCouponCode(code);
+  if (!cleanCode) return;
+  await deleteDoc(doc(requireDb(), "coupons", cleanCode));
 }
 

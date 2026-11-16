@@ -26,7 +26,11 @@ export function InvoiceModal({ order, onClose }: InvoiceModalProps) {
   }, [order, onClose]);
 
   if (!order) return null;
-  const total = order.totalPrice ? formatPrice(order.totalPrice) : "On request";
+  const total = order.totalPrice !== null ? formatPrice(order.totalPrice) : "On request";
+  const hasDiscount = typeof order.discountAmount === "number" && order.discountAmount > 0;
+  const subtotalValue =
+    order.subtotal ?? (hasDiscount && order.totalPrice !== null ? order.totalPrice + order.discountAmount! : order.totalPrice);
+  const subtotalText = subtotalValue !== null ? formatPrice(subtotalValue) : "On request";
 
   return (
     <div className={styles.modalRoot} role="dialog" aria-modal="true" aria-labelledby="slip-title">
@@ -106,8 +110,14 @@ export function InvoiceModal({ order, onClose }: InvoiceModalProps) {
             <dl className={styles.slipTotals}>
               <div>
                 <dt>Subtotal</dt>
-                <dd>{total}</dd>
+                <dd>{subtotalText}</dd>
               </div>
+              {hasDiscount && (
+                <div style={{ color: "var(--success-700)" }}>
+                  <dt>Promo{order.couponCode ? ` (${order.couponCode})` : ""}</dt>
+                  <dd>-{formatPrice(order.discountAmount!)}</dd>
+                </div>
+              )}
               <div>
                 <dt>Delivery</dt>
                 <dd>To be confirmed</dd>

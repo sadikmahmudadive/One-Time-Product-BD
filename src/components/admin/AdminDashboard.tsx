@@ -8,16 +8,20 @@ import { ENQUIRY_STATUSES, exportCsv, formatDate } from "@/lib/admin-utils";
 import type { EnquiryStatus, OrderStatus } from "@/lib/admin-utils";
 import { DEFAULT_CONTACT, type StoreContact } from "@/lib/contact";
 import { useContact } from "@/lib/contact-context";
+import type { Coupon } from "@/lib/coupons";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { DEMO_ORDERS, DEMO_QUOTES, DEMO_SUBSCRIBERS } from "@/lib/mock-admin-data";
 import {
+  deleteCouponFromFirestore,
   deleteProductFromFirestore,
+  getCouponsFromFirestore,
   getEnquiriesFromFirestore,
   getInventoryFromFirestore,
   getNewsletterSubscriptions,
   getOrdersFromFirestore,
   getProductsFromFirestore,
   getStoreContactFromFirestore,
+  saveCouponToFirestore,
   saveInventoryToFirestore,
   saveProductToFirestore,
   saveStoreContactToFirestore,
@@ -32,6 +36,7 @@ import {
 import { InvoiceModal } from "./InvoiceModal";
 import { Avatar, Icon } from "./ui";
 import type { IconName } from "./ui";
+import { CouponsView } from "./views/CouponsView";
 import { CustomersView } from "./views/CustomersView";
 import { InventoryView, stockHealth } from "./views/InventoryView";
 import { MediaView } from "./views/MediaView";
@@ -58,6 +63,7 @@ const NAV: { heading: string; items: { tab: Tab; label: string; icon: IconName }
       { tab: "overview", label: "Overview", icon: "overview" },
       { tab: "orders", label: "Orders", icon: "orders" },
       { tab: "quotes", label: "Quotes & messages", icon: "quotes" },
+      { tab: "coupons", label: "Coupons", icon: "coupon" },
     ],
   },
   {
@@ -76,6 +82,7 @@ const TITLES: Record<Tab, string> = {
   overview: "Overview",
   orders: "Orders",
   quotes: "Quotes & messages",
+  coupons: "Promo coupons",
   products: "Products & catalogue",
   inventory: "Inventory",
   media: "Media",
@@ -127,6 +134,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /coupons/{code} {
+      allow get: if true;
+      allow list, write: if isAdmin();
+    }
   }
 }`;
 
@@ -144,6 +155,8 @@ export function AdminDashboard() {
   const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]);
   const [inventory, setInventory] = useState<InventoryRecord[]>([]);
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponsNeedsRules, setCouponsNeedsRules] = useState(false);
   const [storeContact, setStoreContact] = useState<StoreContact>(DEFAULT_CONTACT);
   const [settingsNeedsRules, setSettingsNeedsRules] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -208,8 +221,9 @@ export function AdminDashboard() {
         getInventoryFromFirestore(),
         getProductsFromFirestore(),
         getStoreContactFromFirestore(),
+        getCouponsFromFirestore(),
       ]);
-      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes, contactRes] = results;
+      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes, contactRes, couponsRes] = results;
       const failed: string[] = [];
       const reason = (r: PromiseRejectedResult) =>
         (r.reason as { code?: string; message?: string })?.code || (r.reason as Error)?.message || "error";
@@ -228,6 +242,12 @@ export function AdminDashboard() {
         if (contactRes.value) setStoreContact(contactRes.value);
       } else {
         setSettingsNeedsRules(true);
+      }
+      if (couponsRes.status === "fulfilled") {
+        setCouponsNeedsRules(false);
+        setCoupons(couponsRes.value);
+      } else {
+        setCouponsNeedsRules(true);
       }
 
       if (failed.length) {
@@ -414,6 +434,35 @@ export function AdminDashboard() {
     } catch (err) {
       if ((err as { code?: string })?.code === "permission-denied") {
         setSettingsNeedsRules(true);
+      }
+      throw err;
+    }
+  }
+
+  async function handleSaveCoupon(coupon: Coupon) {
+    try {
+      const saved = await saveCouponToFirestore(coupon);
+      setCouponsNeedsRules(false);
+      setCoupons((prev) =>
+        [...prev.filter((c) => c.code !== saved.code), saved].sort((a, b) => a.code.localeCompare(b.code))
+      );
+      notify("success", `Promo code "${saved.code}" saved.`);
+    } catch (err) {
+      if ((err as { code?: string })?.code === "permission-denied") {
+        setCouponsNeedsRules(true);
+      }
+      throw err;
+    }
+  }
+
+  async function handleDeleteCoupon(code: string) {
+    try {
+      await deleteCouponFromFirestore(code);
+      setCoupons((prev) => prev.filter((c) => c.code !== code));
+      notify("success", `Deleted promo code "${code}".`);
+    } catch (err) {
+      if ((err as { code?: string })?.code === "permission-denied") {
+        setCouponsNeedsRules(true);
       }
       throw err;
     }
@@ -676,6 +725,17 @@ export function AdminDashboard() {
             />
           )}
           {tab === "quotes" && <QuotesView enquiries={enquiries} loading={loading} onStatusChange={changeEnquiryStatus} onExport={exportQuotes} />}
+          {tab === "coupons" && (
+            <CouponsView
+              coupons={coupons}
+              orders={orders}
+              loading={loading}
+              needsRules={couponsNeedsRules}
+              onSave={handleSaveCoupon}
+              onDelete={handleDeleteCoupon}
+              notify={notify}
+            />
+          )}
           {tab === "products" && (
             <ProductsView
               products={products}
