@@ -32,7 +32,8 @@ export type IconName =
   | "board"
   | "inbox"
   | "settings"
-  | "coupon";
+  | "coupon"
+  | "shield";
 
 const PATHS: Record<IconName, ReactNode> = {
   overview: (
@@ -179,6 +180,12 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M12 2H4a2 2 0 0 0-2 2v8l9.3 9.3a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z" />
       <circle cx="7.5" cy="7.5" r="1.5" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3 4 6.5v5.3c0 5 3.4 9.5 8 10.7 4.6-1.2 8-5.7 8-10.7V6.5z" />
+      <path d="m9.5 12.2 1.8 1.8 3.5-3.8" />
     </>
   ),
 };

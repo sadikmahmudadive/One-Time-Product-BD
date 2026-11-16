@@ -3,14 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { UserIcon } from "@/components/ui/Icons";
-import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useLanguage } from "@/lib/i18n/context";
 import { AuthModal } from "./AuthModal";
 import styles from "./UserMenu.module.css";
 
 export function UserMenu() {
-  const { user, loading, logOut } = useAuth();
+  const { user, loading, access, logOut } = useAuth();
   const { t, pick } = useLanguage();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,7 +48,7 @@ export function UserMenu() {
   }
 
   const initial = (user.displayName || user.email || "U")[0].toUpperCase();
-  const isAdmin = isAdminEmail(user.email);
+  const canOpenDashboard = access.isTeamMember;
 
   return (
     <div className={styles.container} ref={menuRef}>
@@ -75,7 +74,7 @@ export function UserMenu() {
             <p className={styles.userEmail}>{user.email}</p>
           </div>
 
-          {isAdmin && (
+          {canOpenDashboard && (
             <Link
               href="/admin"
               className={styles.item}
@@ -83,7 +82,9 @@ export function UserMenu() {
               onClick={() => setDropdownOpen(false)}
               style={{ color: "var(--brand-700)", fontWeight: 700 }}
             >
-              {t.auth.adminDashboard}
+              {access.isAdmin
+                ? t.auth.adminDashboard
+                : pick("Store Manager Panel", "স্টোর ম্যানেজার প্যানেল")}
             </Link>
           )}
 

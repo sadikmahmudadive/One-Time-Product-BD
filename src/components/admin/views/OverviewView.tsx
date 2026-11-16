@@ -36,9 +36,11 @@ interface OverviewViewProps {
   loading: boolean;
   go: (tab: Tab, filter?: OrderRecord["status"]) => void;
   onOpenOrder: (id: string) => void;
+  canAccess?: (tab: Tab) => boolean;
 }
 
-export function OverviewView({ orders, newQuotes, stock, loading, go, onOpenOrder }: OverviewViewProps) {
+export function OverviewView({ orders, newQuotes, stock, loading, go, onOpenOrder, canAccess }: OverviewViewProps) {
+  const allowTab = canAccess ?? (() => true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<SalesTimeframe>("weekly");
 
   // Until the first response arrives, show placeholders rather than misleading zeros.
@@ -107,8 +109,8 @@ export function OverviewView({ orders, newQuotes, stock, loading, go, onOpenOrde
           tab: "inventory",
           cta: "Check",
         },
-      ] as AttentionItem[]).filter((a) => a.count > 0),
-    [pending, newQuotes, stock]
+      ] as AttentionItem[]).filter((a) => a.count > 0 && allowTab(a.tab)),
+    [pending, newQuotes, stock, allowTab]
   );
 
   return (
@@ -267,9 +269,11 @@ export function OverviewView({ orders, newQuotes, stock, loading, go, onOpenOrde
           title="Recent orders"
           flush
           actions={
-            <button type="button" className={styles.btnGhost} onClick={() => go("orders")}>
-              View all <Icon name="chevron" size={14} />
-            </button>
+            allowTab("orders") ? (
+              <button type="button" className={styles.btnGhost} onClick={() => go("orders")}>
+                View all <Icon name="chevron" size={14} />
+              </button>
+            ) : undefined
           }
         >
           {orders.length === 0 ? (
@@ -289,11 +293,15 @@ export function OverviewView({ orders, newQuotes, stock, loading, go, onOpenOrde
                 </thead>
                 <tbody>
                   {orders.slice(0, 6).map((o) => (
-                    <tr key={o.id} className={styles.rowClickable}>
+                    <tr key={o.id} className={allowTab("orders") ? styles.rowClickable : undefined}>
                       <td>
-                        <button type="button" className={styles.rowLink} onClick={() => o.id && onOpenOrder(o.id)}>
-                          #{shortId(o.id)}
-                        </button>
+                        {allowTab("orders") ? (
+                          <button type="button" className={styles.rowLink} onClick={() => o.id && onOpenOrder(o.id)}>
+                            #{shortId(o.id)}
+                          </button>
+                        ) : (
+                          <span className={styles.cellStrong}>#{shortId(o.id)}</span>
+                        )}
                         <div className={styles.sub}>{formatDate(o.createdAt)}</div>
                       </td>
                       <td>

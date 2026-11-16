@@ -19,6 +19,7 @@ import { PRODUCTS, type Product } from "@/lib/catalog";
 import { normalizeContact, type StoreContact } from "@/lib/contact";
 import { normalizeCoupon, normalizeCouponCode, type Coupon } from "@/lib/coupons";
 import { normalizePromos, type PromoBannerItem } from "@/lib/promos";
+import { normalizeMemberEmail, normalizeTeamMember, type TeamMember } from "@/lib/roles";
 import { db, isFirebaseConfigured } from "./config";
 
 function requireDb() {
@@ -589,5 +590,85 @@ export async function savePromosToFirestore(items: PromoBannerItem[]): Promise<P
     { merge: true }
   );
   return normalized;
+}
+
+/** Look up a signed-in user's assigned team role by normalized email (`team_roles/{email}`). */
+export async function getMyTeamRoleFromFirestore(email: string): Promise<TeamMember | null> {
+  const cleanEmail = normalizeMemberEmail(email);
+  if (!cleanEmail || !isFirebaseConfigured || !db) return null;
+  try {
+    const snap = await getDoc(doc(db, "team_roles", cleanEmail));
+    if (!snap.exists()) return null;
+    const data = snap.data() as Partial<TeamMember>;
+    return normalizeTeamMember({ ...data, email: data.email || snap.id });
+  } catch {
+    return null;
+  }
+}
+
+/** Subscribe to real-time updates on the current user's assigned role (`team_roles/{email}`). */
+export function subscribeMyTeamRole(
+  email: string,
+  onData: (member: TeamMember | null) => void,
+  onError?: (err: Error) => void
+): () => void {
+  const cleanEmail = normalizeMemberEmail(email);
+  if (!cleanEmail || !isFirebaseConfigured || !db) return () => {};
+  return onSnapshot(
+    doc(db, "team_roles", cleanEmail),
+    (snap) => {
+      if (!snap.exists()) {
+        onData(null);
+        return;
+      }
+      const data = snap.data() as Partial<TeamMember>;
+      onData(normalizeTeamMember({ ...data, email: data.email || snap.id }));
+    },
+    (err) => {
+      onError?.(err);
+    }
+  );
+}
+
+/** Admin only: list all assigned admins & store managers (`team_roles`). */
+export async function getTeamRolesFromFirestore(): Promise<TeamMember[]> {
+  const database = requireDb();
+  const snapshot = await getDocs(collection(database, "team_roles"));
+  const list = snapshot.docs.map((d) => {
+    const data = d.data() as Partial<TeamMember>;
+    return normalizeTeamMember({ ...data, email: data.email || d.id });
+  });
+  return list.sort((a, b) => a.email.localeCompare(b.email));
+}
+
+/** Admin only: assign or update a team member's role & permissions. */
+export async function saveTeamRoleToFirestore(member: TeamMember): Promise<TeamMember> {
+  const normalized = normalizeTeamMember(member);
+  if (!normalized.email) {
+    throw new Error("Team member email is required.");
+  }
+  const database = requireDb();
+  await setDoc(
+    doc(database, "team_roles", normalized.email),
+    {
+      email: normalized.email,
+      name: normalized.name ?? null,
+      role: normalized.role,
+      permissions: normalized.permissions,
+      active: normalized.active,
+      ...(normalized.addedBy ? { addedBy: normalized.addedBy } : {}),
+      updatedAt: serverTimestamp(),
+      ...(normalized.createdAt ? {} : { createdAt: serverTimestamp() }),
+    },
+    { merge: true }
+  );
+  return normalized;
+}
+
+/** Admin only: revoke / remove a team member's role document by email. */
+export async function deleteTeamRoleFromFirestore(email: string): Promise<void> {
+  const cleanEmail = normalizeMemberEmail(email);
+  if (!cleanEmail) return;
+  await deleteDoc(doc(requireDb(), "team_roles", cleanEmail));
 }
 

@@ -10,12 +10,14 @@ import { DEFAULT_CONTACT, type StoreContact } from "@/lib/contact";
 import { useContact } from "@/lib/contact-context";
 import type { Coupon } from "@/lib/coupons";
 import type { PromoBannerItem } from "@/lib/promos";
+import type { TeamMember } from "@/lib/roles";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { DEMO_ORDERS, DEMO_QUOTES, DEMO_SUBSCRIBERS } from "@/lib/mock-admin-data";
 import {
   deleteCouponFromFirestore,
   deleteProductFromFirestore,
+  deleteTeamRoleFromFirestore,
   getCouponsFromFirestore,
   getEnquiriesFromFirestore,
   getInventoryFromFirestore,
@@ -24,11 +26,13 @@ import {
   getProductsFromFirestore,
   getPromosFromFirestore,
   getStoreContactFromFirestore,
+  getTeamRolesFromFirestore,
   saveCouponToFirestore,
   saveInventoryToFirestore,
   saveProductToFirestore,
   savePromosToFirestore,
   saveStoreContactToFirestore,
+  saveTeamRoleToFirestore,
   seedCatalogToFirestore,
   updateEnquiryStatus,
   updateOrderStatus,
@@ -38,7 +42,7 @@ import {
   type OrderRecord,
 } from "@/lib/firebase/firestore";
 import { InvoiceModal } from "./InvoiceModal";
-import { Avatar, Icon } from "./ui";
+import { Avatar, EmptyState, Icon } from "./ui";
 import type { IconName } from "./ui";
 import { CouponsView } from "./views/CouponsView";
 import { CustomersView } from "./views/CustomersView";
@@ -50,6 +54,7 @@ import { OverviewView } from "./views/OverviewView";
 import { ProductsView } from "./views/ProductsView";
 import { QuotesView } from "./views/QuotesView";
 import { SettingsView } from "./views/SettingsView";
+import { TeamView } from "./views/TeamView";
 import { TABS } from "./views/types";
 import type { StockSummary, Tab } from "./views/types";
 import styles from "./admin.module.css";
@@ -78,7 +83,13 @@ const NAV: { heading: string; items: { tab: Tab; label: string; icon: IconName }
       { tab: "media", label: "Media", icon: "media" },
     ],
   },
-  { heading: "People", items: [{ tab: "customers", label: "Customers", icon: "customers" }] },
+  {
+    heading: "People",
+    items: [
+      { tab: "customers", label: "Customers", icon: "customers" },
+      { tab: "team", label: "Team & roles", icon: "shield" },
+    ],
+  },
   { heading: "Store", items: [{ tab: "settings", label: "Store & contact", icon: "settings" }] },
 ];
 
@@ -91,56 +102,76 @@ const TITLES: Record<Tab, string> = {
   inventory: "Inventory",
   media: "Media",
   customers: "Customers",
+  team: "Team & roles",
   settings: "Store & contact",
 };
 
 const FIRESTORE_RULES_SNIPPET = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function userEmailLower() {
+      return request.auth != null && ('email' in request.auth.token)
+        ? request.auth.token.email.lower()
+        : '';
+    }
+    function isRootAdmin() {
+      return userEmailLower() in [
+        'onetimeproductbd@gmail.com',
+        'siradive137@gmail.com',
+        'vertexhand@gmail.com'
+      ];
+    }
+    function teamDoc() {
+      return get(/databases/$(database)/documents/team_roles/$(userEmailLower()));
+    }
+    function hasActiveTeamRole() {
+      return userEmailLower() != '' &&
+        exists(/databases/$(database)/documents/team_roles/$(userEmailLower())) &&
+        teamDoc().data.active == true;
+    }
     function isAdmin() {
-      return request.auth != null && 
-        ('email' in request.auth.token) &&
-        (
-          request.auth.token.email.lower() in [
-            'onetimeproductbd@gmail.com',
-            'siradive137@gmail.com',
-            'vertexhand@gmail.com'
-          ] ||
-          request.auth.token.email in [
-            'onetimeproductbd@gmail.com',
-            'siradive137@gmail.com',
-            'vertexhand@gmail.com'
-          ]
-        );
+      return isRootAdmin() || (hasActiveTeamRole() && teamDoc().data.role == 'admin');
+    }
+    function hasPermission(perm) {
+      return isAdmin() || (
+        hasActiveTeamRole() &&
+        teamDoc().data.role == 'store_manager' &&
+        (perm in teamDoc().data.permissions)
+      );
+    }
+    match /team_roles/{email} {
+      allow get: if isAdmin() || (request.auth != null && userEmailLower() == email.lower());
+      allow list, write: if isAdmin();
     }
     match /products/{slug} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if hasPermission('manage_products');
     }
     match /orders/{orderId} {
       allow create: if true;
       allow get: if true;
-      allow list, update, delete: if isAdmin() || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
+      allow list: if hasPermission('manage_orders') || hasPermission('view_overview') || hasPermission('view_customers') || hasPermission('manage_coupons') || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
+      allow update, delete: if hasPermission('manage_orders') || (request.auth != null && ('userId' in resource.data) && resource.data.userId == request.auth.uid);
     }
     match /enquiries/{enquiryId} {
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read, update, delete: if hasPermission('manage_quotes');
     }
     match /subscribers/{subscriberId} {
       allow create: if true;
-      allow read, write: if isAdmin();
+      allow read, write: if hasPermission('view_customers');
     }
     match /inventory/{slug} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if hasPermission('manage_inventory') || hasPermission('manage_products');
     }
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if (settingId == 'promotions' && hasPermission('manage_coupons')) || hasPermission('manage_settings');
     }
     match /coupons/{code} {
       allow get: if true;
-      allow list, write: if isAdmin();
+      allow list, write: if hasPermission('manage_coupons');
     }
   }
 }`;
@@ -151,7 +182,7 @@ function tabFromHash(): Tab {
 }
 
 export function AdminDashboard() {
-  const { user, logOut } = useAuth();
+  const { user, access, accessLoading, logOut } = useAuth();
   const { refresh: refreshGlobalContact } = useContact();
   const [tab, setTabState] = useState<Tab>("overview");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -162,6 +193,8 @@ export function AdminDashboard() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [promos, setPromos] = useState<PromoBannerItem[]>([]);
   const [couponsNeedsRules, setCouponsNeedsRules] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamNeedsRules, setTeamNeedsRules] = useState(false);
   const [storeContact, setStoreContact] = useState<StoreContact>(DEFAULT_CONTACT);
   const [settingsNeedsRules, setSettingsNeedsRules] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -196,6 +229,14 @@ export function AdminDashboard() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // Ensure current tab stays within the user's granted role permissions.
+  useEffect(() => {
+    if (accessLoading || !access.isTeamMember || access.allowedTabs.length === 0) return;
+    if (!access.canAccessTab(tab)) {
+      setTab(access.allowedTabs[0]);
+    }
+  }, [accessLoading, access, tab, setTab]);
+
   useEffect(() => {
     if (!navOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);
@@ -211,8 +252,22 @@ export function AdminDashboard() {
   }, []);
 
   /* ---------- Data ---------- */
+  const canReadOrders =
+    access.hasPermission("manage_orders") ||
+    access.hasPermission("view_overview") ||
+    access.hasPermission("view_customers") ||
+    access.hasPermission("manage_coupons");
+  const canReadQuotes = access.hasPermission("manage_quotes");
+  const canReadCustomers = access.hasPermission("view_customers");
+  const canReadCatalog =
+    access.hasPermission("manage_inventory") ||
+    access.hasPermission("manage_products") ||
+    access.hasPermission("view_overview");
+  const canReadSettings = access.hasPermission("manage_settings");
+  const canReadCoupons = access.hasPermission("manage_coupons");
+
   const loadData = useCallback(async (silent = false) => {
-    if (isFetchingRef.current) return;
+    if (isFetchingRef.current || accessLoading || !access.isTeamMember) return;
     isFetchingRef.current = true;
     if (!silent) {
       setLoading(true);
@@ -220,16 +275,27 @@ export function AdminDashboard() {
     }
     try {
       const results = await Promise.allSettled([
-        getOrdersFromFirestore(),
-        getEnquiriesFromFirestore(),
-        getNewsletterSubscriptions(),
-        getInventoryFromFirestore(),
-        getProductsFromFirestore(),
-        getStoreContactFromFirestore(),
-        getCouponsFromFirestore(),
-        getPromosFromFirestore(),
+        canReadOrders ? getOrdersFromFirestore() : Promise.resolve<OrderRecord[]>([]),
+        canReadQuotes ? getEnquiriesFromFirestore() : Promise.resolve<EnquiryRecord[]>([]),
+        canReadCustomers ? getNewsletterSubscriptions() : Promise.resolve<NewsletterSubscription[]>([]),
+        canReadCatalog ? getInventoryFromFirestore() : Promise.resolve<InventoryRecord[]>([]),
+        canReadCatalog ? getProductsFromFirestore() : Promise.resolve<Product[]>([]),
+        canReadSettings ? getStoreContactFromFirestore() : Promise.resolve<StoreContact | null>(null),
+        canReadCoupons ? getCouponsFromFirestore() : Promise.resolve<Coupon[]>([]),
+        canReadCoupons ? getPromosFromFirestore() : Promise.resolve<PromoBannerItem[]>([]),
+        access.isAdmin ? getTeamRolesFromFirestore() : Promise.resolve<TeamMember[]>([]),
       ]);
-      const [ordersRes, enquiriesRes, subscribersRes, inventoryRes, productsRes, contactRes, couponsRes, promosRes] = results;
+      const [
+        ordersRes,
+        enquiriesRes,
+        subscribersRes,
+        inventoryRes,
+        productsRes,
+        contactRes,
+        couponsRes,
+        promosRes,
+        teamRes,
+      ] = results;
       const failed: string[] = [];
       const reason = (r: PromiseRejectedResult) =>
         (r.reason as { code?: string; message?: string })?.code || (r.reason as Error)?.message || "error";
@@ -262,11 +328,17 @@ export function AdminDashboard() {
       if (promosRes.status === "fulfilled") {
         setPromos(promosRes.value);
       }
+      if (teamRes.status === "fulfilled") {
+        setTeamNeedsRules(false);
+        setTeamMembers(teamRes.value);
+      } else {
+        setTeamNeedsRules(true);
+      }
 
       if (failed.length) {
         if (!silent) {
           setLoadError(
-            `Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account is an approved admin.`
+            `Couldn’t load ${failed.join(", ")}. Check that your Firestore security rules are published and this account has permission.`
           );
         }
       } else {
@@ -280,7 +352,18 @@ export function AdminDashboard() {
       isFetchingRef.current = false;
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [
+    accessLoading,
+    access.isTeamMember,
+    access.isAdmin,
+    canReadOrders,
+    canReadQuotes,
+    canReadCustomers,
+    canReadCatalog,
+    canReadSettings,
+    canReadCoupons,
+    products.length,
+  ]);
 
   useEffect(() => {
     void loadData(false);
@@ -496,6 +579,40 @@ export function AdminDashboard() {
     }
   }
 
+  async function handleSaveTeamRole(member: TeamMember) {
+    if (!access.isAdmin) return;
+    try {
+      const saved = await saveTeamRoleToFirestore(member);
+      setTeamNeedsRules(false);
+      setTeamMembers((prev) =>
+        [...prev.filter((m) => m.email !== saved.email), saved].sort((a, b) => a.email.localeCompare(b.email))
+      );
+      notify(
+        "success",
+        `${saved.email} assigned ${saved.role === "admin" ? "Admin" : "Store Manager"} access.`
+      );
+    } catch (err) {
+      if ((err as { code?: string })?.code === "permission-denied") {
+        setTeamNeedsRules(true);
+      }
+      throw err;
+    }
+  }
+
+  async function handleDeleteTeamRole(email: string) {
+    if (!access.isAdmin) return;
+    try {
+      await deleteTeamRoleFromFirestore(email);
+      setTeamMembers((prev) => prev.filter((m) => m.email !== email));
+      notify("success", `Removed dashboard access for ${email}.`);
+    } catch (err) {
+      if ((err as { code?: string })?.code === "permission-denied") {
+        setTeamNeedsRules(true);
+      }
+      throw err;
+    }
+  }
+
   /* ---------- Exports ---------- */
   const exportOrders = () =>
     exportCsv(
@@ -582,38 +699,42 @@ export function AdminDashboard() {
           <Link href="/" className={styles.brand} aria-label="One Time Product BD storefront">
             <Logo tone="dark" knockout="var(--brand-950)" size={21} />
           </Link>
-          <span className={styles.envTag}>Operations</span>
+          <span className={styles.envTag}>{access.isAdmin ? "Admin" : "Store Manager"}</span>
         </div>
 
         <nav className={styles.nav}>
-          {NAV.map((group) => (
-            <div key={group.heading} className={styles.navGroup}>
-              <p className={styles.navHeading}>{group.heading}</p>
-              {group.items.map((item) => {
-                const b = badge(item.tab);
-                return (
-                  <button
-                    key={item.tab}
-                    type="button"
-                    className={`${styles.navItem} ${tab === item.tab ? styles.navItemOn : ""}`}
-                    aria-current={tab === item.tab ? "page" : undefined}
-                    onClick={() => setTab(item.tab)}
-                  >
-                    <Icon name={item.icon} size={18} />
-                    <span className={styles.navLabel}>{item.label}</span>
-                    {b && <span className={`${styles.navBadge} ${b.alert ? styles.navBadgeAlert : ""}`}>{b.count}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+          {NAV.map((group) => {
+            const items = group.items.filter((item) => access.canAccessTab(item.tab));
+            if (items.length === 0) return null;
+            return (
+              <div key={group.heading} className={styles.navGroup}>
+                <p className={styles.navHeading}>{group.heading}</p>
+                {items.map((item) => {
+                  const b = badge(item.tab);
+                  return (
+                    <button
+                      key={item.tab}
+                      type="button"
+                      className={`${styles.navItem} ${tab === item.tab ? styles.navItemOn : ""}`}
+                      aria-current={tab === item.tab ? "page" : undefined}
+                      onClick={() => setTab(item.tab)}
+                    >
+                      <Icon name={item.icon} size={18} />
+                      <span className={styles.navLabel}>{item.label}</span>
+                      {b && <span className={`${styles.navBadge} ${b.alert ? styles.navBadgeAlert : ""}`}>{b.count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         <div className={styles.sidebarFoot}>
           <div className={styles.account}>
             <Avatar name={name} />
             <div className={styles.accountText}>
-              <strong>{user?.displayName || "Admin"}</strong>
+              <strong>{user?.displayName || (access.isAdmin ? "Admin" : "Store Manager")}</strong>
               <span>{user?.email}</span>
             </div>
             <button type="button" className={styles.signOut} onClick={() => logOut()} aria-label="Sign out">
@@ -738,76 +859,109 @@ export function AdminDashboard() {
             </div>
           )}
 
-          {tab === "overview" && <OverviewView orders={orders} newQuotes={newQuotes} stock={stock} loading={loading} go={goTo} onOpenOrder={openOrder} />}
-          {tab === "orders" && (
-            <OrdersView
-              orders={orders}
-              loading={loading}
-              filter={orderFilter}
-              setFilter={setOrderFilter}
-              onStatusChange={changeOrderStatus}
-              onSlip={setSlipOrder}
-              onExport={exportOrders}
-              openId={openOrderId}
-              setOpenId={setOpenOrderId}
+          {access.allowedTabs.length === 0 ? (
+            <EmptyState
+              icon="shield"
+              title="No permissions assigned yet"
+              text="Ask a Store Admin to grant view permissions to your Store Manager account under Team & roles."
             />
-          )}
-          {tab === "quotes" && <QuotesView enquiries={enquiries} loading={loading} onStatusChange={changeEnquiryStatus} onExport={exportQuotes} />}
-          {tab === "coupons" && (
-            <CouponsView
-              coupons={coupons}
-              promos={promos}
-              orders={orders}
-              loading={loading}
-              needsRules={couponsNeedsRules}
-              onSave={handleSaveCoupon}
-              onDelete={handleDeleteCoupon}
-              onSavePromos={handleSavePromos}
-              notify={notify}
-            />
-          )}
-          {tab === "products" && (
-            <ProductsView
-              products={products}
-              loading={loading}
-              onSave={handleSaveProduct}
-              onDelete={handleDeleteProduct}
-              onSeed={handleSeedCatalog}
-              onExport={exportProducts}
-              notify={notify}
-            />
-          )}
-          {tab === "inventory" && (
-            <InventoryView
-              products={products}
-              inventory={inventory}
-              loading={loading}
-              onSave={saveStock}
-              onExport={exportInventory}
-              notify={notify}
-            />
-          )}
-          {tab === "customers" && (
-            <CustomersView
-              orders={orders}
-              subscribers={subscribers}
-              onExport={(list) =>
-                exportCsv(
-                  "otpb-customers",
-                  list.map((c) => ({ name: c.name, contact: c.contact, district: c.district, orders: c.orders, lifetime_spend_bdt: c.spend }))
-                )
-              }
-            />
-          )}
-          {tab === "media" && <MediaView notify={notify} />}
-          {tab === "settings" && (
-            <SettingsView
-              contact={storeContact}
-              loading={loading}
-              needsRules={settingsNeedsRules}
-              onSave={handleSaveContact}
-              notify={notify}
-            />
+          ) : (
+            <>
+              {tab === "overview" && access.canAccessTab("overview") && (
+                <OverviewView
+                  orders={orders}
+                  newQuotes={newQuotes}
+                  stock={stock}
+                  loading={loading}
+                  go={goTo}
+                  onOpenOrder={openOrder}
+                  canAccess={access.canAccessTab}
+                />
+              )}
+              {tab === "orders" && access.canAccessTab("orders") && (
+                <OrdersView
+                  orders={orders}
+                  loading={loading}
+                  filter={orderFilter}
+                  setFilter={setOrderFilter}
+                  onStatusChange={changeOrderStatus}
+                  onSlip={setSlipOrder}
+                  onExport={exportOrders}
+                  openId={openOrderId}
+                  setOpenId={setOpenOrderId}
+                />
+              )}
+              {tab === "quotes" && access.canAccessTab("quotes") && (
+                <QuotesView enquiries={enquiries} loading={loading} onStatusChange={changeEnquiryStatus} onExport={exportQuotes} />
+              )}
+              {tab === "coupons" && access.canAccessTab("coupons") && (
+                <CouponsView
+                  coupons={coupons}
+                  promos={promos}
+                  orders={orders}
+                  loading={loading}
+                  needsRules={couponsNeedsRules}
+                  onSave={handleSaveCoupon}
+                  onDelete={handleDeleteCoupon}
+                  onSavePromos={handleSavePromos}
+                  notify={notify}
+                />
+              )}
+              {tab === "products" && access.canAccessTab("products") && (
+                <ProductsView
+                  products={products}
+                  loading={loading}
+                  onSave={handleSaveProduct}
+                  onDelete={handleDeleteProduct}
+                  onSeed={handleSeedCatalog}
+                  onExport={exportProducts}
+                  notify={notify}
+                />
+              )}
+              {tab === "inventory" && access.canAccessTab("inventory") && (
+                <InventoryView
+                  products={products}
+                  inventory={inventory}
+                  loading={loading}
+                  onSave={saveStock}
+                  onExport={exportInventory}
+                  notify={notify}
+                />
+              )}
+              {tab === "customers" && access.canAccessTab("customers") && (
+                <CustomersView
+                  orders={orders}
+                  subscribers={subscribers}
+                  onExport={(list) =>
+                    exportCsv(
+                      "otpb-customers",
+                      list.map((c) => ({ name: c.name, contact: c.contact, district: c.district, orders: c.orders, lifetime_spend_bdt: c.spend }))
+                    )
+                  }
+                />
+              )}
+              {tab === "team" && access.isAdmin && (
+                <TeamView
+                  currentUserEmail={user?.email}
+                  members={teamMembers}
+                  loading={loading}
+                  needsRules={teamNeedsRules}
+                  onSave={handleSaveTeamRole}
+                  onDelete={handleDeleteTeamRole}
+                  notify={notify}
+                />
+              )}
+              {tab === "media" && access.canAccessTab("media") && <MediaView notify={notify} />}
+              {tab === "settings" && access.canAccessTab("settings") && (
+                <SettingsView
+                  contact={storeContact}
+                  loading={loading}
+                  needsRules={settingsNeedsRules}
+                  onSave={handleSaveContact}
+                  notify={notify}
+                />
+              )}
+            </>
           )}
         </main>
       </div>

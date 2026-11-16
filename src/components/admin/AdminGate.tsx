@@ -2,27 +2,30 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/firebase/auth-context";
 import styles from "./admin.module.css";
 
 /**
- * Keeps non-admins out of /admin. The dashboard draws its own chrome, so this only gates access.
- * Real protection is the Firestore rules; this stops the UI from rendering for everyone else.
+ * Keeps unauthorized accounts out of /admin. Allows approved Admins and active Store Managers.
+ * Real enforcement lives in Firestore security rules; this keeps UI gated cleanly.
  */
 export function AdminGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, isConfigured } = useAuth();
+  const { user, loading, accessLoading, access, isConfigured } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const admin = isAdminEmail(user?.email);
   const onLogin = pathname === "/admin/login";
+  const checking = loading || accessLoading;
 
   useEffect(() => {
-    if (!onLogin && !loading && (!isConfigured || !user || !admin)) router.replace("/admin/login");
-  }, [onLogin, loading, isConfigured, user, admin, router]);
+    if (!onLogin && !checking && (!isConfigured || !user || !access.isTeamMember)) {
+      router.replace("/admin/login");
+    }
+  }, [onLogin, checking, isConfigured, user, access.isTeamMember, router]);
 
   if (onLogin) return <>{children}</>;
-  if (loading) return <div className={styles.gateMsg} role="status">Checking access…</div>;
-  if (!isConfigured || !user || !admin) return <div className={styles.gateMsg} role="status">Redirecting to sign in…</div>;
+  if (checking) return <div className={styles.gateMsg} role="status">Checking access…</div>;
+  if (!isConfigured || !user || !access.isTeamMember) {
+    return <div className={styles.gateMsg} role="status">Redirecting to sign in…</div>;
+  }
   return <>{children}</>;
 }

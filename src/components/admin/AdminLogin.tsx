@@ -6,6 +6,8 @@ import { useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { getMyTeamRoleFromFirestore } from "@/lib/firebase/firestore";
+import { resolveUserAccess } from "@/lib/roles";
 import styles from "./admin.module.css";
 
 export function AdminLogin() {
@@ -18,10 +20,16 @@ export function AdminLogin() {
     setError("");
     setPending(true);
     try {
-      const user = await action();
-      if (!isAdminEmail(user.email)) {
+      const signedInUser = await action();
+      const isRoot = isAdminEmail(signedInUser.email);
+      const teamRecord = !isRoot && signedInUser.email
+        ? await getMyTeamRoleFromFirestore(signedInUser.email)
+        : null;
+      const access = resolveUserAccess(signedInUser.email, isRoot, teamRecord);
+
+      if (!access.isTeamMember) {
         await logOut();
-        setError("This account isn’t approved for the operations dashboard.");
+        setError("This account isn’t approved as an Admin or Store Manager.");
         return;
       }
       router.replace("/admin");
