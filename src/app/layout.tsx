@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Hanken_Grotesk, Inter, Noto_Sans_Bengali } from "next/font/google";
+import {
+  Bricolage_Grotesque,
+  Hanken_Grotesk,
+  Instrument_Serif,
+  Inter,
+  Noto_Sans_Bengali,
+} from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { ContactProvider } from "@/lib/contact-context";
 import { AuthProvider } from "@/lib/firebase/auth-context";
@@ -12,6 +18,14 @@ const inter = Inter({
   weight: ["400", "500", "600", "700", "800"],
   style: ["normal", "italic"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
   display: "swap",
 });
 
@@ -45,7 +59,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-intro="on" className={`${inter.variable} ${notoBengali.variable} ${bricolage.variable} ${hanken.variable}`}>
+    <html
+      lang="en"
+      data-intro="on"
+      data-scroll-behavior="smooth"
+      className={`${inter.variable} ${instrumentSerif.variable} ${notoBengali.variable} ${bricolage.variable} ${hanken.variable}`}
+    >
       <body>
         <noscript>
           <style>{`.loader{display:none}.w,.fade-in,.chip-pop{opacity:1}`}</style>

@@ -116,9 +116,19 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <p aria-hidden="true" className={`reveal-zoom ${styles.wordmark}`}>
-          onetime <span>product</span>
-        </p>
+        <div className={styles.wordmarkRow}>
+          <p aria-hidden="true" className={`reveal-zoom ${styles.wordmark}`}>
+            onetime <span>product</span>
+          </p>
+          <a
+            href="#top"
+            className={styles.topCircle}
+            aria-label={t.footer.backToTop}
+            title={t.footer.backToTop}
+          >
+            <span aria-hidden="true">↑</span>
+          </a>
+        </div>
 
         <div className={styles.legal}>
           <span>{t.footer.legal}</span>

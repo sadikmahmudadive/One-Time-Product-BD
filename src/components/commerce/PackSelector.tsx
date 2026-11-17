@@ -12,10 +12,15 @@ interface PackSelectorProps {
 /** Pack-size pills for variable products (pieces per pack). */
 export function PackSelector({ packs, selected, onSelect }: PackSelectorProps) {
   const { pick } = useLanguage();
+  const numericOnly = packs.every((p) => /^\d+$/.test(p.trim()));
 
   return (
     <div>
-      <p className={styles.label}>{pick("Pack size (pcs)", "প্যাক সাইজ (পিস)")}</p>
+      <p className={styles.label}>
+        {numericOnly
+          ? pick("Pack size (pcs)", "প্যাক সাইজ (পিস)")
+          : pick("Select option", "অপশন বাছাই করুন")}
+      </p>
       <div className={styles.pills}>
         {packs.map((p) => (
           <button

@@ -3,29 +3,31 @@
   align-items: center;
   gap: 8px;
   padding: 14px 0 14px var(--gutter);
-  background: var(--accent-500);
-  color: var(--brand-950);
+  background: #141613;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Lime-on-lime: the global lime focus ring would vanish here. */
 .band a:focus-visible,
 .band button:focus-visible {
-  outline-color: var(--brand-950);
+  outline-color: var(--accent-500);
 }
 
 .pause {
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: var(--brand-950);
+  background: transparent;
   color: #fff;
   cursor: pointer;
   transition:
     transform 160ms var(--ease-out),
+    border-color 160ms,
     background-color 160ms;
 }
 .pause:active {
@@ -33,7 +35,8 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .pause:hover {
-    background: var(--brand-900);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.35);
   }
 }
 
@@ -76,14 +79,15 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 7px 26px 7px 7px;
+  padding: 7px 24px 7px 7px;
   border-radius: 999px;
-  border: 1px solid rgba(16, 45, 37, 0.16);
-  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
   color: inherit;
   text-decoration: none;
   transition:
     background-color 160ms ease,
+    border-color 160ms ease,
     transform 160ms var(--ease-out);
 }
 .chip:hover {
@@ -94,7 +98,8 @@ a.chip:active {
 }
 @media (hover: hover) and (pointer: fine) {
   a.chip:hover {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 }
 .static {
@@ -103,11 +108,11 @@ a.chip:active {
 
 .thumb {
   flex: none;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
-  padding: 6px;
+  padding: 5px;
   border-radius: 999px;
   background: #fff;
 }
@@ -115,8 +120,8 @@ a.chip:active {
   width: 100%;
 }
 .thumbIcon {
-  background: var(--brand-950);
-  color: var(--accent-500);
+  background: var(--surface-sage);
+  color: var(--brand-700);
 }
 
 .text {
@@ -127,17 +132,18 @@ a.chip:active {
 }
 
 .label {
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1.15;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: #fff;
 }
 
 .sub {
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.3;
-  font-weight: 600;
-  color: var(--brand-900);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.54);
 }
 
 /* Reduced motion: no autoplay. The band is a plain row the visitor can swipe or scroll. */

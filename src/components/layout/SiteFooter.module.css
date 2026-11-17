@@ -1,6 +1,8 @@
 .footer {
+  position: relative;
   background: var(--brand-950);
   color: #fff;
+  overflow: hidden;
 }
 
 .inner {
@@ -72,6 +74,7 @@
   gap: 16px 40px;
   padding-bottom: 12px;
 }
+
 .brand p {
   margin: 0;
   max-width: 46ch;
@@ -79,6 +82,7 @@
   line-height: 1.55;
   color: var(--brand-100);
 }
+
 .brandLink {
   display: inline-flex;
   align-items: center;
@@ -112,25 +116,64 @@
   font-size: 15px;
   transition: color 0.2s;
 }
+
 .link:hover {
   color: var(--accent-500);
 }
 
+.wordmarkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
 .wordmark {
-  margin: 0 0 32px;
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
   font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
-  font-size: clamp(40px, 11.6vw, 172px);
-  line-height: 0.9;
+  font-size: clamp(24px, 8.6vw, 152px);
+  line-height: 0.88;
   font-weight: 700;
-  letter-spacing: -0.05em;
-  color: var(--brand-900);
+  letter-spacing: -0.055em;
+  color: rgba(255, 255, 255, 0.86);
   white-space: nowrap;
   overflow: hidden;
 }
+
 .wordmark span {
   font-weight: 700;
-  color: var(--brand-700);
-  opacity: 0.55;
+  color: rgba(255, 255, 255, 0.22);
+  opacity: 1;
+}
+
+.topCircle {
+  flex: none;
+  width: clamp(44px, 6.8vw, 96px);
+  height: clamp(44px, 6.8vw, 96px);
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: clamp(18px, 2.5vw, 32px);
+  font-weight: 500;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  transition:
+    transform 0.35s var(--ease-editorial),
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.topCircle:hover {
+  transform: translateY(-4px);
+  background: var(--accent-500);
+  border-color: var(--accent-500);
+  color: #0b0b0b;
 }
 
 .legal {
@@ -140,9 +183,9 @@
   align-items: center;
   gap: 12px;
   padding-top: 24px;
-  border-top: 1px solid rgba(231, 241, 235, 0.16);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 13px;
-  color: var(--brand-100);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .top2 {

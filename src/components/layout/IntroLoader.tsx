@@ -7,8 +7,8 @@ import styles from "./IntroLoader.module.css";
 
 type Phase = "on" | "leaving" | "gone";
 
-const LEAVE_MS = 1000;
-const HOLD_MS = 1200;
+const LEAVE_MS = 900;
+const HOLD_MS = 500;
 
 function setIntro(value: "on" | "go") {
   document.documentElement.dataset.intro = value;

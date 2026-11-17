@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ProductShape } from "@/components/ui/ProductShape";
 import { PERSONAS } from "@/lib/content";
 import { useLanguage } from "@/lib/i18n/context";
 import styles from "./MadeForSection.module.css";
@@ -31,27 +30,36 @@ const PERSONAS_BN = [
   },
 ];
 
+const PERSONA_PHOTOS: Record<string, string> = {
+  "01": "/images/hero/black-premium-box.jpg",
+  "02": "/images/hero/square-clear-boxes.jpg",
+  "03": "/images/hero/acrylic-dessert-cup.jpg",
+  "04": "/images/hero/square-clear-boxes.jpg",
+};
+
 export function MadeForSection() {
   const { lang, pick } = useLanguage();
 
   return (
     <section id="madefor" className={`section ${styles.section}`}>
       <div className={`wrap ${styles.inner}`}>
+        <div className={`editorial-rule ${styles.rule}`}>
+          <span>{pick("03 / BUILT BY SECTOR", "০৩ / ব্যবসার ধরন অনুযায়ী")}</span>
+          <span>{pick("RETAIL, BAKERY, CATERING & HOME.", "রিটেইল, বেকারি, ক্যাটারিং ও ঘরোয়া।")}</span>
+        </div>
+
         <div className={`reveal section-head ${styles.head}`}>
           <div>
-            <p className="eyebrow" style={{ color: "var(--accent-500)" }}>
-              {pick("03 — Made for", "০৩ — যাদের জন্য তৈরি")}
-            </p>
-            <h2 className="section-title">
+            <h2 className="section-title" style={{ color: "var(--ink-950)" }}>
               {pick("Packaging for", "আপনার")}{" "}
-              <span className="it" style={{ color: "var(--accent-500)" }}>
+              <span className="it" style={{ color: "var(--brand-700)" }}>
                 {pick("your", "ব্যবসার")}
               </span>{" "}
               {pick("kind of business.", "উপযোগী প্যাকেজিং।")}
             </h2>
           </div>
-          <p className="section-lede" style={{ color: "var(--brand-100)" }}>
-            {pick("Not sure where to start? Pick the one that sounds like you.", "কোথা থেকে শুরু করবেন বুঝতে পারছেন না? আপনার ধরন অনুযায়ী বেছে নিন।")}
+          <p className="section-lede" style={{ color: "var(--ink-700)" }}>
+            {pick("Not sure where to start? Pick the format tailored to your counter.", "কোথা থেকে শুরু করবেন বুঝতে পারছেন না? আপনার ধরন অনুযায়ী বেছে নিন।")}
           </p>
         </div>
 
@@ -61,15 +69,16 @@ export function MadeForSection() {
             const title = lang === "bn" && bn ? bn.title : p.title;
             const desc = lang === "bn" && bn ? bn.desc : p.desc;
             const picks = lang === "bn" && bn ? bn.picks : p.picks;
+            const photo = PERSONA_PHOTOS[p.n] ?? "/images/hero/square-clear-boxes.jpg";
 
             return (
               <div key={p.n} className={`reveal ${DELAYS[i % 4]}`} style={{ height: "100%" }}>
                 <Link className={styles.persona} href={p.href}>
-                  <div className={styles.media} style={{ background: p.bg }}>
+                  <div className={styles.media}>
                     <span className={styles.num}>{p.n}</span>
-                    <div className={styles.img}>
-                      <ProductShape kind={p.kind} />
-                    </div>
+                    <span className={styles.specimenLine} aria-hidden="true" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo} alt={title} loading="lazy" className={styles.img} />
                   </div>
                   <div className={styles.body}>
                     <h3 className={styles.title}>{title}</h3>
@@ -81,7 +90,7 @@ export function MadeForSection() {
                     <span className={styles.cta}>
                       {pick("View packaging", "প্যাকেজিং দেখুন")}{" "}
                       <span className={styles.arrow} aria-hidden="true">
-                        →
+                        ↗
                       </span>
                     </span>
                   </div>

@@ -27,7 +27,7 @@ export function ShopSection() {
   const [tab, setTab] = useState<Tab>("new");
   const [packs, setPacks] = useState<Record<string, string>>({});
   const [quickProduct, setQuickProduct] = useState<Product | null>(null);
-  const items = useMemo(() => products.filter((p) => p.tags.includes(tab)), [products, tab]);
+  const items = useMemo(() => products.filter((p) => p.tags.includes(tab)).slice(0, 4), [products, tab]);
   const isLoading = loading && products.length === 0;
 
   return (

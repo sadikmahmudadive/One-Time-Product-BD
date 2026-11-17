@@ -26,8 +26,12 @@ export function SignatureSection() {
   const { lang, pick } = useLanguage();
 
   return (
-    <section id="signature" className={`section ${styles.section}`}>
+    <section id="signature" className={`section grid-backdrop ${styles.section}`}>
       <div className={`wrap ${styles.inner}`}>
+        <div className="editorial-rule editorial-rule-dark">
+          <span>{pick("05 / SIGNATURE SPECIMEN", "০৫ / সিগনেচার এডিশন")}</span>
+          <span>{pick("1000 ML GLOSSY BLACK · SCROLL TO INSPECT.", "১০০০ মিলি ব্ল্যাক বক্স · স্ক্রল করে দেখুন।")}</span>
+        </div>
         <div className={`reveal ${styles.head}`}>
           <p className="eyebrow eyebrow-center" style={{ color: "var(--accent-500)" }}>
             {pick("05 — High-end quality", "০৫ — প্রিমিয়াম মান")}

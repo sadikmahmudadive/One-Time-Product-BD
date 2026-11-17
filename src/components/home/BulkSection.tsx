@@ -20,11 +20,12 @@ export function BulkSection() {
   return (
     <section id="bulk" className={`section ${styles.section}`}>
       <div className={`wrap ${styles.inner}`}>
+        <div className="editorial-rule">
+          <span>{pick("06 / WHOLESALE & BULK", "০৬ / পাইকারি ও বাল্ক অর্ডার")}</span>
+          <span>{pick("DHAKA DISPATCH · CUSTOM PRICING.", "ঢাকা থেকে সারা দেশে ডেলিভারি।")}</span>
+        </div>
         <div className={`reveal ${styles.panel}`}>
           <div>
-            <p className="eyebrow" style={{ color: "var(--brand-700)" }}>
-              {pick("07 — Bulk orders", "০৭ — পাইকারি ও বাল্ক অর্ডার")}
-            </p>
             <h2 className={styles.title}>
               {pick("Buying for a bakery, sweet shop", "বেকারি, মিষ্টির দোকান")}{" "}
               <span className="it" style={{ color: "var(--brand-700)" }}>

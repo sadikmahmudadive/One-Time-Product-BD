@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ArrowRightIcon } from "@/components/ui/Icons";
-import { ProductShape } from "@/components/ui/ProductShape";
 import { CATEGORIES, lowestPrice, type CategoryId } from "@/lib/catalog";
 import { buildCloudinaryUrl } from "@/lib/cloudinary/client";
 import { formatPrice } from "@/lib/format";
@@ -29,6 +28,13 @@ const CAT_BN: Record<CategoryId, { name: string; description: string }> = {
   },
 };
 
+const FALLBACK_BY_CAT: Record<CategoryId, string> = {
+  square: "/images/hero/square-clear-boxes.jpg",
+  round: "/images/hero/black-premium-box.jpg",
+  "dessert-cups": "/images/hero/acrylic-dessert-cup.jpg",
+  crates: "/images/hero/plastic-storage-crate.jpg",
+};
+
 const SPAN_CLASS: Record<CategoryId, string> = {
   square: `${styles.cardSquare} ${styles.cardLead}`,
   round: styles.cardRound,
@@ -44,6 +50,10 @@ export function CategoryBento() {
   return (
     <section id="categories" className={styles.section} aria-labelledby="bento-categories-heading">
       <div className="wrap">
+        <div className="editorial-rule">
+          <span>{pick("01 / FORMAT DIRECTORY", "০১ / প্যাকেজিং ক্যাটাগরি")}</span>
+          <span>{pick("RETAIL PACKS & WHOLESALE.", "খুচরা ও পাইকারি প্যাক।")}</span>
+        </div>
         <div className={`reveal ${styles.head}`}>
           <div>
             <p className="eyebrow" style={{ color: "var(--brand-700)" }}>
@@ -109,16 +119,25 @@ export function CategoryBento() {
                 <div className={styles.visual}>
                   {isLoading ? (
                     <div className={styles.skelVisual} aria-hidden="true" />
-                  ) : featuredImage ? (
+                  ) : (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={buildCloudinaryUrl(featuredImage, { width: 380, height: 380, crop: "fill" })}
+                      src={
+                        featuredImage
+                          ? buildCloudinaryUrl(featuredImage, { width: 480, height: 480, crop: "fit", quality: "auto", format: "auto" })
+                          : FALLBACK_BY_CAT[cat.id]
+                      }
                       alt={title}
                       loading="lazy"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        if (img.src !== window.location.origin + FALLBACK_BY_CAT[cat.id]) {
+                          img.src = FALLBACK_BY_CAT[cat.id];
+                        }
+                      }}
                       className={styles.photo}
+                      style={featuredImage ? { objectFit: "contain", padding: "10px" } : undefined}
                     />
-                  ) : (
-                    <ProductShape kind={cat.kind} />
                   )}
                 </div>
               </Link>

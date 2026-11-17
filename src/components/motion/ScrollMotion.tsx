@@ -44,22 +44,54 @@ export function ScrollMotion() {
       const all = <T extends Element = HTMLElement>(sel: string) => gsap.utils.toArray<T>(sel);
 
       /* ---------- Header progress hairline ---------- */
-      gsap.fromTo(
-        ".progress",
-        { scaleX: 0 },
-        { scaleX: 1, ease: "none", scrollTrigger: { start: 0, end: "max", scrub: true } },
-      );
+      const progress = all(".progress");
+      if (progress.length > 0) {
+        gsap.fromTo(
+          progress,
+          { scaleX: 0 },
+          { scaleX: 1, ease: "none", scrollTrigger: { start: 0, end: "max", scrub: true } },
+        );
+      }
 
-      /* ---------- Hero: both columns lift away as the next chapter arrives ---------- */
+      /* ---------- Hero: multi-plane depth scroll choreography ---------- */
       const hero = document.getElementById("top");
       if (hero) {
-        gsap.to(all(".hero-out"), {
-          y: -80,
-          scale: 0.96,
-          opacity: 0.2,
-          ease: "none",
-          scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: true },
+        const heroScrub = { trigger: hero, start: "22% top", end: "bottom top", scrub: 0.6 };
+
+        const heroOut = all(".hero-out");
+        if (heroOut.length > 0) {
+          gsap.to(heroOut, { y: -80, scale: 0.96, opacity: 0.2, ease: "none", scrollTrigger: heroScrub });
+        }
+
+        const heroCopy = hero.querySelector("[data-hero-copy]");
+        if (heroCopy) {
+          gsap.to(heroCopy, { y: -64, scale: 0.98, opacity: 0.35, ease: "none", scrollTrigger: heroScrub });
+        }
+
+        const heroStage = hero.querySelector("[data-hero-stage]");
+        if (heroStage) {
+          gsap.to(heroStage, { y: -40, scale: 0.96, opacity: 0.4, ease: "none", scrollTrigger: heroScrub });
+        }
+
+        hero.querySelectorAll<HTMLElement>("[data-hero-floater]").forEach((floater, idx) => {
+          const speed = Number(floater.dataset.heroFloater || 1);
+          gsap.to(floater, {
+            y: -60 * speed,
+            rotation: idx % 2 === 0 ? -4 : 4,
+            ease: "none",
+            scrollTrigger: heroScrub,
+          });
         });
+
+        const heroChip = hero.querySelector("[data-hero-chip]");
+        if (heroChip) {
+          gsap.to(heroChip, { y: -24, ease: "none", scrollTrigger: heroScrub });
+        }
+
+        const heroChapters = hero.querySelector("[data-hero-chapters]");
+        if (heroChapters) {
+          gsap.to(heroChapters, { y: -16, ease: "none", scrollTrigger: heroScrub });
+        }
       }
 
       /* ---------- Text blocks and cards rise in ---------- */
