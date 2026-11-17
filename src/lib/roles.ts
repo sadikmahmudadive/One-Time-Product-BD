@@ -126,6 +126,7 @@ export function normalizeTeamMember(raw: Partial<TeamMember> & { email: string }
 export interface UserAccess {
   isTeamMember: boolean;
   isRootAdmin: boolean;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   role: TeamRole | null;
   permissions: PermissionKey[];
@@ -145,6 +146,7 @@ export function resolveUserAccess(
     return {
       isTeamMember: false,
       isRootAdmin: false,
+      isSuperAdmin: false,
       isAdmin: false,
       role: null,
       permissions: [],
@@ -158,6 +160,7 @@ export function resolveUserAccess(
     return {
       isTeamMember: true,
       isRootAdmin: true,
+      isSuperAdmin: true,
       isAdmin: true,
       role: "admin",
       permissions: [...ALL_PERMISSION_KEYS],
@@ -182,6 +185,7 @@ export function resolveUserAccess(
     return {
       isTeamMember: false,
       isRootAdmin: false,
+      isSuperAdmin: false,
       isAdmin: false,
       role: null,
       permissions: [],
@@ -195,6 +199,7 @@ export function resolveUserAccess(
     return {
       isTeamMember: true,
       isRootAdmin: false,
+      isSuperAdmin: false,
       isAdmin: true,
       role: "admin",
       permissions: [...ALL_PERMISSION_KEYS],
@@ -240,6 +245,7 @@ export function resolveUserAccess(
   return {
     isTeamMember: true,
     isRootAdmin: false,
+    isSuperAdmin: false,
     isAdmin: false,
     role: "store_manager",
     permissions: perms,

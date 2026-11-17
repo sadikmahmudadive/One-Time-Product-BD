@@ -114,7 +114,7 @@ service cloud.firestore {
         ? request.auth.token.email.lower()
         : '';
     }
-    function isRootAdmin() {
+    function isSuperAdmin() {
       return userEmailLower() in [
         'onetimeproductbd@gmail.com',
         'siradive137@gmail.com',
@@ -130,7 +130,7 @@ service cloud.firestore {
         teamDoc().data.active == true;
     }
     function isAdmin() {
-      return isRootAdmin() || (hasActiveTeamRole() && teamDoc().data.role == 'admin');
+      return isSuperAdmin() || (hasActiveTeamRole() && teamDoc().data.role == 'admin');
     }
     function hasPermission(perm) {
       return isAdmin() || (
@@ -141,7 +141,8 @@ service cloud.firestore {
     }
     match /team_roles/{email} {
       allow get: if isAdmin() || (request.auth != null && userEmailLower() == email.lower());
-      allow list, write: if isAdmin();
+      allow list, create, update: if isAdmin();
+      allow delete: if isSuperAdmin() && userEmailLower() != email.lower();
     }
     match /products/{slug} {
       allow read: if true;
@@ -600,11 +601,18 @@ export function AdminDashboard() {
   }
 
   async function handleDeleteTeamRole(email: string) {
-    if (!access.isAdmin) return;
+    if (!access.isSuperAdmin) {
+      notify("error", "Only Super Admin accounts (Vercel env allowlist) can delete team accounts.");
+      return;
+    }
+    if (email.trim().toLowerCase() === (user?.email ?? "").trim().toLowerCase()) {
+      notify("error", "You cannot delete your own signed-in Super Admin account.");
+      return;
+    }
     try {
       await deleteTeamRoleFromFirestore(email);
       setTeamMembers((prev) => prev.filter((m) => m.email !== email));
-      notify("success", `Removed dashboard access for ${email}.`);
+      notify("success", `Deleted dashboard account access for ${email}.`);
     } catch (err) {
       if ((err as { code?: string })?.code === "permission-denied") {
         setTeamNeedsRules(true);
@@ -699,7 +707,9 @@ export function AdminDashboard() {
           <Link href="/" className={styles.brand} aria-label="One Time Product BD storefront">
             <Logo tone="dark" knockout="var(--brand-950)" size={21} />
           </Link>
-          <span className={styles.envTag}>{access.isAdmin ? "Admin" : "Store Manager"}</span>
+          <span className={styles.envTag}>
+            {access.isSuperAdmin ? "Super Admin" : access.isAdmin ? "Admin" : "Store Manager"}
+          </span>
         </div>
 
         <nav className={styles.nav}>
@@ -734,7 +744,7 @@ export function AdminDashboard() {
           <div className={styles.account}>
             <Avatar name={name} />
             <div className={styles.accountText}>
-              <strong>{user?.displayName || (access.isAdmin ? "Admin" : "Store Manager")}</strong>
+              <strong>{user?.displayName || (access.isSuperAdmin ? "Super Admin" : access.isAdmin ? "Admin" : "Store Manager")}</strong>
               <span>{user?.email}</span>
             </div>
             <button type="button" className={styles.signOut} onClick={() => logOut()} aria-label="Sign out">
@@ -943,6 +953,7 @@ export function AdminDashboard() {
               {tab === "team" && access.isAdmin && (
                 <TeamView
                   currentUserEmail={user?.email}
+                  isSuperAdmin={access.isSuperAdmin}
                   members={teamMembers}
                   loading={loading}
                   needsRules={teamNeedsRules}

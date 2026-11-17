@@ -18,6 +18,7 @@ import styles from "../admin.module.css";
 
 interface TeamViewProps {
   currentUserEmail?: string | null;
+  isSuperAdmin?: boolean;
   members: TeamMember[];
   loading: boolean;
   needsRules?: boolean;
@@ -30,6 +31,7 @@ const PERM_LABELS = new Map<PermissionKey, string>(ALL_PERMISSIONS.map((p) => [p
 
 export function TeamView({
   currentUserEmail,
+  isSuperAdmin = false,
   members,
   loading,
   needsRules,
@@ -164,7 +166,7 @@ export function TeamView({
       return;
     }
     if (rootAdmins.includes(cleanEmail)) {
-      notify("error", "Root admin accounts defined in environment configuration already have permanent full access.");
+      notify("error", "Super Admin accounts configured in Vercel environment variables already have permanent full access.");
       return;
     }
     if (!editingEmail && cleanEmail === currentLower) {
@@ -235,18 +237,23 @@ export function TeamView({
   }
 
   async function handleDelete(m: TeamMember) {
-    if (m.email === currentLower) {
-      notify("error", "You cannot remove your own signed-in admin account.");
+    if (!isSuperAdmin) {
+      notify("error", "Only Super Admin accounts (Vercel environment allowlist) can delete accounts.");
       return;
     }
-    if (!confirm(`Remove ${m.email} from the Admin / Store Manager team? They will lose dashboard access immediately.`)) {
+    if (m.email === currentLower) {
+      notify("error", "You cannot delete your own signed-in Super Admin account.");
+      return;
+    }
+    const roleLabel = m.role === "admin" ? "Admin" : "Store Manager";
+    if (!confirm(`Delete ${roleLabel} account ${m.email}? They will lose dashboard access immediately.`)) {
       return;
     }
     try {
       await onDelete(m.email);
       if (editingEmail === m.email) resetForm();
     } catch {
-      notify("error", `Failed to remove ${m.email}.`);
+      notify("error", `Failed to delete ${m.email}.`);
     }
   }
 
@@ -254,8 +261,29 @@ export function TeamView({
     <div className={styles.stack}>
       <PageHeader
         title="Team & Roles"
-        description="Assign Admin (full access) or Store Manager (custom granted permissions) roles for /admin."
+        description={
+          isSuperAdmin
+            ? "Create logins, assign Admin or Store Manager permissions, and delete existing team or admin accounts."
+            : "Create logins and assign Store Manager or Admin roles. Account deletion requires Super Admin access."
+        }
       />
+
+      {!isSuperAdmin && (
+        <div className={styles.permissionNotice} role="status">
+          <div className={styles.permissionNoticeHead}>
+            <div className={styles.permissionNoticeTitle}>
+              <Icon name="shield" size={18} />
+              <span>Admin Access — Super Admin Required to Delete Accounts</span>
+            </div>
+          </div>
+          <div className={styles.permissionNoticeBody}>
+            <p>
+              You can create profiles, update roles, and pause access. Only <strong>Super Admin</strong> accounts configured
+              in Vercel environment variables can permanently delete existing Admin or Store Manager accounts.
+            </p>
+          </div>
+        </div>
+      )}
 
       {needsRules && (
         <div className={styles.permissionNotice} role="status">
@@ -618,7 +646,7 @@ export function TeamView({
       </form>
 
       {/* ---------- Team Directory Table ---------- */}
-      <Panel title="Team Directory" description="Root admins from server config plus Firestore-assigned Admins & Store Managers." flush>
+      <Panel title="Team Directory" description="Vercel env Super Admins (protected) plus Firestore-assigned Admins & Store Managers." flush>
         <div className={styles.toolbar}>
           <SearchField
             label="Search team members"
@@ -651,13 +679,13 @@ export function TeamView({
                     <tr key={`root-${rootEmail}`}>
                       <td>
                         <div className={styles.cellStrong}>{rootEmail}</div>
-                        <div className={styles.sub}>Root environment allowlist</div>
+                        <div className={styles.sub}>Vercel environment allowlist</div>
                       </td>
                       <td>
-                        <Tone tone="accent">Root Admin</Tone>
+                        <Tone tone="accent">Super Admin</Tone>
                       </td>
                       <td>
-                        <span className={styles.sub}>All permissions + Team management</span>
+                        <span className={styles.sub}>All permissions + Delete accounts</span>
                       </td>
                       <td>
                         <Tone tone="success">Active</Tone>
@@ -749,14 +777,17 @@ export function TeamView({
                             <button type="button" className={styles.btnSm} onClick={() => startEdit(m)}>
                               Edit
                             </button>
-                            <button
-                              type="button"
-                              className={`${styles.btnSm} ${styles.btnDanger}`}
-                              onClick={() => void handleDelete(m)}
-                              disabled={isSelf}
-                            >
-                              Remove
-                            </button>
+                            {isSuperAdmin && (
+                              <button
+                                type="button"
+                                className={`${styles.btnSm} ${styles.btnDanger}`}
+                                onClick={() => void handleDelete(m)}
+                                disabled={isSelf}
+                                title={isSelf ? "Cannot delete your own account" : `Delete ${m.role === "admin" ? "Admin" : "Store Manager"} account`}
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

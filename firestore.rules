@@ -8,7 +8,8 @@ service cloud.firestore {
         : '';
     }
 
-    function isRootAdmin() {
+    // Super Admin accounts configured in Vercel env (NEXT_PUBLIC_ADMIN_EMAILS)
+    function isSuperAdmin() {
       return userEmailLower() in [
         'onetimeproductbd@gmail.com',
         'siradive137@gmail.com',
@@ -26,9 +27,9 @@ service cloud.firestore {
         teamDoc().data.active == true;
     }
 
-    // Full administrator (root env allowlist OR assigned role == 'admin')
+    // Full administrator (Super Admin OR assigned role == 'admin')
     function isAdmin() {
-      return isRootAdmin() || (hasActiveTeamRole() && teamDoc().data.role == 'admin');
+      return isSuperAdmin() || (hasActiveTeamRole() && teamDoc().data.role == 'admin');
     }
 
     // Granular permission check for Admin and Store Manager accounts
@@ -40,10 +41,11 @@ service cloud.firestore {
       );
     }
 
-    // Team Roles & Permissions (Admin only for management; users can read their own role doc)
+    // Team Roles & Permissions (Admins can view/assign/update; ONLY Super Admin can delete accounts)
     match /team_roles/{email} {
       allow get: if isAdmin() || (request.auth != null && userEmailLower() == email.lower());
-      allow list, write: if isAdmin();
+      allow list, create, update: if isAdmin();
+      allow delete: if isSuperAdmin() && userEmailLower() != email.lower();
     }
 
     // Products Collection (Storefront & Operations)
