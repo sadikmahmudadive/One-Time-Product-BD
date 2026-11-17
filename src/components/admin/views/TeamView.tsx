@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getRootAdminEmails } from "@/lib/admin";
+import { provisionTeamUserLogin, resetPassword } from "@/lib/firebase/auth";
 import {
   ALL_PERMISSION_KEYS,
   ALL_PERMISSIONS,
@@ -44,6 +45,16 @@ export function TeamView({
 
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password: string;
+    role: TeamRole;
+  } | null>(null);
+  const [revealCreatedPassword, setRevealCreatedPassword] = useState(false);
+  const [copiedCredentials, setCopiedCredentials] = useState(false);
+  const [resettingEmail, setResettingEmail] = useState<string | null>(null);
   const [role, setRole] = useState<TeamRole>("store_manager");
   const [permissions, setPermissions] = useState<PermissionKey[]>(DEFAULT_MANAGER_PERMISSIONS);
   const [active, setActive] = useState(true);
@@ -75,15 +86,55 @@ export function TeamView({
     setEditingEmail(null);
     setEmail("");
     setName("");
+    setPassword("");
+    setShowPassword(false);
     setRole("store_manager");
     setPermissions([...DEFAULT_MANAGER_PERMISSIONS]);
     setActive(true);
+  }
+
+  function generateStrongPassword() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+    const arr = new Uint32Array(12);
+    crypto.getRandomValues(arr);
+    const generated = Array.from(arr, (n) => chars[n % chars.length]).join("");
+    setPassword(generated);
+    setShowPassword(true);
+  }
+
+  async function copyCreatedCredentials() {
+    if (!createdCredentials) return;
+    const text = `One Time Product BD Admin Login\nURL: ${window.location.origin}/admin/login\nEmail: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCredentials(true);
+      setTimeout(() => setCopiedCredentials(false), 2000);
+    } catch {
+      notify("error", "Couldn’t copy credentials — select and copy them manually.");
+    }
+  }
+
+  async function handleSendReset(targetEmail: string) {
+    try {
+      setResettingEmail(targetEmail);
+      await resetPassword(targetEmail);
+      notify("success", `Password reset email sent to ${targetEmail}.`);
+    } catch (err) {
+      notify(
+        "error",
+        `Couldn’t send reset email: ${(err as Error)?.message || "Check Firebase Email/Password auth."}`
+      );
+    } finally {
+      setResettingEmail((prev) => (prev === targetEmail ? null : prev));
+    }
   }
 
   function startEdit(m: TeamMember) {
     setEditingEmail(m.email);
     setEmail(m.email);
     setName(m.name ?? "");
+    setPassword("");
+    setShowPassword(false);
     setRole(m.role);
     setPermissions(m.role === "admin" ? [...ALL_PERMISSION_KEYS] : [...m.permissions]);
     setActive(m.active);
@@ -124,6 +175,10 @@ export function TeamView({
       notify("error", "Select at least one permission for an active Store Manager.");
       return;
     }
+    if (!editingEmail && password.length > 0 && password.length < 6) {
+      notify("error", "Password must be at least 6 characters.");
+      return;
+    }
 
     const member = normalizeTeamMember({
       email: cleanEmail,
@@ -138,6 +193,27 @@ export function TeamView({
     try {
       setSaving(true);
       await onSave(member);
+      if (!editingEmail && password.length >= 6) {
+        try {
+          const authOutcome = await provisionTeamUserLogin(cleanEmail, password, member.name);
+          if (authOutcome === "created") {
+            setCreatedCredentials({ email: cleanEmail, password, role });
+            setRevealCreatedPassword(false);
+            setCopiedCredentials(false);
+            notify("success", `Login profile created & role assigned for ${cleanEmail}.`);
+          } else {
+            notify(
+              "error",
+              `Assigned ${role === "admin" ? "Admin" : "Store Manager"} role for ${cleanEmail}, but this email already has an existing Firebase account — their existing password remains active (send a reset email if needed).`
+            );
+          }
+        } catch (authErr) {
+          notify(
+            "error",
+            `Role saved for ${cleanEmail}, but login creation failed: ${(authErr as Error)?.message || "Try again."}`
+          );
+        }
+      }
       resetForm();
     } catch (err) {
       notify("error", `Couldn’t save team role: ${(err as Error)?.message || "Check permissions."}`);
@@ -236,20 +312,69 @@ export function TeamView({
         />
       </div>
 
+      {/* ---------- Newly Created Login Credentials Confirmation ---------- */}
+      {createdCredentials && (
+        <Panel
+          title={`User profile ready · ${createdCredentials.email}`}
+          description="Share these login credentials with your team member so they can sign in at /admin/login."
+          actions={
+            <button type="button" className={styles.btnSm} onClick={() => setCreatedCredentials(null)}>
+              Dismiss
+            </button>
+          }
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            <div style={{ display: "grid", gap: 6, fontSize: 13.5 }}>
+              <div>
+                <span style={{ color: "var(--ink-700)", fontWeight: 600 }}>Email: </span>
+                <code style={{ fontWeight: 700 }}>{createdCredentials.email}</code>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ color: "var(--ink-700)", fontWeight: 600 }}>Password: </span>
+                <code style={{ fontWeight: 700 }}>
+                  {revealCreatedPassword ? createdCredentials.password : "•".repeat(createdCredentials.password.length)}
+                </code>
+                <button
+                  type="button"
+                  className={styles.btnSm}
+                  onClick={() => setRevealCreatedPassword((v) => !v)}
+                >
+                  {revealCreatedPassword ? "Hide" : "Reveal"}
+                </button>
+              </div>
+            </div>
+            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => void copyCreatedCredentials()}>
+              <Icon name={copiedCredentials ? "check" : "copy"} size={15} />
+              {copiedCredentials ? "Copied credentials" : "Copy login credentials"}
+            </button>
+          </div>
+        </Panel>
+      )}
+
       {/* ---------- Assign / Edit Role Panel ---------- */}
       <form onSubmit={handleSubmit}>
         <Panel
-          title={editingEmail ? `Edit Access · ${editingEmail}` : "Assign Admin or Store Manager"}
+          title={editingEmail ? `Edit Access · ${editingEmail}` : "Create User Profile & Assign Role"}
           description={
             editingEmail
-              ? "Switch role or adjust which operational permissions this team member holds."
-              : "Team members sign in with this exact Firebase email (Email/Password or Google)."
+              ? "Switch role, adjust permissions, or send a password reset email for this account."
+              : "Set an email and password to create their Firebase login immediately, or leave password blank for Google / existing accounts."
           }
           actions={
             editingEmail ? (
-              <button type="button" className={styles.btnSm} onClick={resetForm}>
-                Cancel edit
-              </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={styles.btnSm}
+                  disabled={resettingEmail === editingEmail}
+                  onClick={() => void handleSendReset(editingEmail)}
+                >
+                  {resettingEmail === editingEmail ? "Sending…" : "Send password reset email"}
+                </button>
+                <button type="button" className={styles.btnSm} onClick={resetForm}>
+                  Cancel edit
+                </button>
+              </div>
             ) : undefined
           }
         >
@@ -284,6 +409,44 @@ export function TeamView({
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
+
+              {!editingEmail && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+                    <label className="lbl" htmlFor="tm-password" style={{ marginBottom: 0 }}>
+                      Login Password (min 6 chars)
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.btnSm}
+                      onClick={generateStrongPassword}
+                      style={{ minHeight: 24, padding: "2px 8px", fontSize: 11.5 }}
+                    >
+                      Generate
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      id="tm-password"
+                      className="field"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="Leave blank if using Google login"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={{ flex: 1, minWidth: 0 }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.btnSm}
+                      onClick={() => setShowPassword((v) => !v)}
+                      style={{ minHeight: 46, padding: "0 12px" }}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Role cards */}
@@ -441,7 +604,13 @@ export function TeamView({
 
               <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={saving}>
                 <Icon name="check" size={16} />
-                {saving ? "Saving…" : editingEmail ? "Update Role & Permissions" : "Assign Role"}
+                {saving
+                  ? "Saving…"
+                  : editingEmail
+                    ? "Update Role & Permissions"
+                    : password.length > 0
+                      ? "Create Profile & Assign Role"
+                      : "Assign Role"}
               </button>
             </div>
           </div>
@@ -567,6 +736,15 @@ export function TeamView({
                               disabled={isSelf}
                             >
                               {m.active ? "Pause" : "Activate"}
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.btnSm}
+                              onClick={() => void handleSendReset(m.email)}
+                              disabled={resettingEmail === m.email}
+                              title="Send password reset link"
+                            >
+                              {resettingEmail === m.email ? "Sending…" : "Reset pass"}
                             </button>
                             <button type="button" className={styles.btnSm} onClick={() => startEdit(m)}>
                               Edit
